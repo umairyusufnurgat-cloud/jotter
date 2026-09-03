@@ -1,0 +1,13 @@
+# 🖥️ OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 📜 logs
+*.log
+.server.log
+
+# 📦 deps / build
+node_modules/
+dist/
+build/

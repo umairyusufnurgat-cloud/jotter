@@ -1,0 +1,12 @@
+{
+  "name": "Jotter — Markdown Notes & Journal",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "Jotter web app",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postStartCommand": "nohup python3 -m http.server 8000 > .server.log 2>&1 & echo '✍️ Jotter is running on port 8000'"
+}

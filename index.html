@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Jotter — Markdown Notes &amp; Journal</title>
+  <meta name="description" content="A fast, private, offline-friendly markdown notes & journal app. No accounts, no servers — your notes stay in your browser." />
+  <meta name="theme-color" content="#6558d3" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <noscript><p style="padding:2rem;font-family:system-ui">Jotter needs JavaScript to run — please enable it and reload.</p></noscript>
+
+  <div class="app">
+    <!-- ======================= SIDEBAR ======================= -->
+    <aside class="sidebar" id="sidebar" aria-label="Notes sidebar">
+      <div class="side-top">
+        <div class="brand">
+          <span class="brand-mark" data-icon="book"></span>
+          <span class="brand-name">Jotter</span>
+        </div>
+        <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+      </div>
+
+      <div class="side-actions">
+        <button class="btn primary block" id="newNoteBtn" data-icon="filePlus">
+          <span>New note</span><kbd>Ctrl Alt N</kbd>
+        </button>
+        <button class="btn ghost block" id="dailyBtn" data-icon="calendar">
+          <span>Today&rsquo;s journal</span>
+        </button>
+      </div>
+
+      <label class="search-row">
+        <span class="search-ico" data-icon="search"></span>
+        <input id="searchInput" type="search" placeholder="Search notes…" autocomplete="off" spellcheck="false" />
+        <kbd>/</kbd>
+      </label>
+
+      <div class="side-meta">
+        <select id="sortSelect" aria-label="Sort notes">
+          <option value="updated">Recently updated</option>
+          <option value="created">Newest first</option>
+          <option value="title">Title A–Z</option>
+        </select>
+      </div>
+
+      <div class="tag-filters" id="tagFilters"></div>
+
+      <nav class="notes-list" id="notesList" role="list" aria-label="Notes"></nav>
+
+      <div class="side-bottom">
+        <div class="seg">
+          <button class="seg-btn" id="notesViewBtn" data-icon="file"><span>Notes</span></button>
+          <button class="seg-btn" id="trashViewBtn" data-icon="trash">
+            <span>Trash</span><span class="count" id="trashCount" hidden></span>
+          </button>
+        </div>
+        <div class="side-foot-row">
+          <button class="link-btn" id="exportAllBtn" data-icon="download"><span>Backup</span></button>
+          <button class="link-btn" id="importBtn" data-icon="upload"><span>Restore</span></button>
+        </div>
+        <button class="link-btn danger block" id="emptyTrashBtn" hidden>Empty trash</button>
+        <div class="storage-note" id="storageNote"></div>
+      </div>
+    </aside>
+    <div class="overlay" id="overlay" hidden></div>
+
+    <!-- ======================= MAIN ======================= -->
+    <main class="main">
+      <section class="empty-state" id="emptyState">
+        <div class="empty-art" data-icon="book"></div>
+        <h1 id="emptyTitle">Welcome to Jotter</h1>
+        <p id="emptyText">Capture ideas, keep a daily journal, and organise everything with tags — all private, right in your browser.</p>
+        <div class="empty-actions">
+          <button class="btn primary" id="emptyNewBtn" data-icon="filePlus"><span>New note</span></button>
+          <button class="btn ghost" id="emptyDailyBtn" data-icon="calendar"><span>Start today&rsquo;s journal</span></button>
+          <button class="btn ghost" id="clearFiltersBtn" data-icon="x" hidden><span>Clear filters</span></button>
+        </div>
+        <p class="empty-hint"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> new note &nbsp;·&nbsp; <kbd>/</kbd> search &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>E</kbd> switch view</p>
+      </section>
+
+      <section class="editor" id="editor" hidden>
+        <div class="trash-banner" id="trashBanner" hidden>
+          <span class="tb-icon" data-icon="trash"></span>
+          <span class="tb-text">This note is in the trash.</span>
+          <span class="tb-spacer"></span>
+          <button class="btn small" id="restoreBtn" data-icon="undo"><span>Restore</span></button>
+          <button class="btn small danger" id="deleteForeverBtn"><span>Delete forever</span></button>
+        </div>
+
+        <header class="toolbar">
+          <button class="icon-btn mobile-only" id="sidebarToggle" data-icon="menu" aria-label="Open sidebar"></button>
+          <div class="segmented" id="viewSeg" role="tablist" aria-label="View mode">
+            <button data-view="edit" role="tab">Edit</button>
+            <button data-view="split" role="tab">Split</button>
+            <button data-view="preview" role="tab">Preview</button>
+          </div>
+          <div class="spacer"></div>
+          <button class="icon-btn" id="starBtn" title="Star" aria-label="Star note" aria-pressed="false"></button>
+          <button class="icon-btn" id="pinBtn" data-icon="pin" title="Pin" aria-label="Pin note" aria-pressed="false"></button>
+          <span class="tool-sep"></span>
+          <button class="icon-btn" id="downloadNoteBtn" data-icon="download" title="Download .md" aria-label="Download note as markdown"></button>
+          <button class="icon-btn" id="printBtn" data-icon="printer" title="Print / save as PDF" aria-label="Print note"></button>
+          <div class="menu-anchor">
+            <button class="icon-btn" id="noteMenuBtn" data-icon="more" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false"></button>
+            <div class="menu" id="noteMenu" hidden>
+              <button id="duplicateBtn" data-icon="copy"><span>Duplicate</span></button>
+              <button id="copyMdBtn" data-icon="copy"><span>Copy markdown</span></button>
+              <hr />
+              <button id="trashCurrentBtn" class="danger" data-icon="trash"><span>Move to trash</span></button>
+            </div>
+          </div>
+        </header>
+
+        <div class="doc-head">
+          <input class="title-input" id="titleInput" placeholder="Untitled" aria-label="Note title" maxlength="120" autocomplete="off" />
+          <div class="tags-editor" id="tagsEditor">
+            <span class="chips" id="chips"></span>
+            <input id="tagInput" placeholder="Add a tag…" aria-label="Add tag" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+
+        <div class="panes" id="panes" data-view="split">
+          <textarea id="editorArea" class="editor-area" placeholder="Start writing… markdown works here ✨" aria-label="Note content" spellcheck="true"></textarea>
+          <article id="previewArea" class="preview markdown-body" aria-label="Rendered preview"></article>
+        </div>
+
+        <footer class="statusbar">
+          <span id="statsInfo">0 words · 0 characters</span>
+          <span class="save-status" id="saveStatus">Saved</span>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <input type="file" id="importFile" accept="application/json,.json" hidden />
+
+  <script src="markdown.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

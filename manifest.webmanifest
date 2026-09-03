@@ -1,0 +1,18 @@
+{
+  "name": "Jotter — Markdown Notes & Journal",
+  "short_name": "Jotter",
+  "description": "Fast, private markdown notes & journal that lives in your browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f2ec",
+  "theme_color": "#6558d3",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

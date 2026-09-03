@@ -1,0 +1,120 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="Jotter — Markdown Notes & Journal" width="100%" />
+</p>
+
+<h3 align="center">✍️ A fast, private, markdown-powered notes & journal app.<br>Zero dependencies. No accounts, no servers, no tracking.</h3>
+
+<p align="center">
+  <a href="https://umairyusufnurgat-cloud.github.io/jotter/"><img src="https://img.shields.io/badge/🚀_Launch_app-GitHub_Pages-2ea44f?style=for-the-badge" alt="Launch app" /></a>
+  <a href="https://codespaces.new/umairyusufnurgat-cloud/jotter"><img src="https://github.com/codespaces/badge.svg" alt="Open in Codespaces" /></a>
+  <br />
+  <img src="https://img.shields.io/badge/dependencies-zero-6558d3" alt="zero dependencies" />
+  <img src="https://img.shields.io/badge/build-none_needed-success" alt="no build step" />
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" />
+  <img src="https://img.shields.io/badge/works-offline-8f86f2" alt="works offline" />
+</p>
+
+---
+
+## ✨ Features
+
+- 📝 **Markdown everywhere** — headings, **bold**, *italic*, tables, code blocks, blockquotes, task lists…
+- ✅ **Interactive checkboxes** — tick a task in the preview and the markdown source updates itself
+- 🪓 **Split view** — write on the left, see the rendered result on the right (scroll-synced)
+- 🏷️ **Tags** — organise notes with tag chips and filter the sidebar by tag
+- 📌 **Pin & star** the notes that matter; sort by updated / created / title
+- 🔍 **Instant search** across titles, bodies, and tags
+- 📅 **Today's journal** — one click creates a dated daily entry with a journal template
+- 🌗 **Light & dark themes** — follows your system, switchable
+- 💾 **Private by design** — notes are stored in *your browser's* local storage; nothing ever leaves your device
+- 🔄 **Backup & restore** — export all notes to a JSON file; restore merges them back (newest edit wins)
+- ⬇️ **Export any note** as `.md`, or copy its markdown to the clipboard
+- 🖨️ **Print / save as PDF** with clean print styles
+- 📱 **Responsive + installable** — works great on phones; install it as a PWA and it works offline
+- ⌨️ **Keyboard shortcuts** for everything
+- 🗑️ **Trash** — deleted notes rest for 30 days before being purged
+
+## 🚀 Launch it
+
+### Option A — GitHub Pages (one-time setup)
+
+The app is 100% static, so hosting it on GitHub Pages takes ~30 seconds:
+
+1. Open the repo on GitHub → **Settings** → **Pages**
+2. Under *Build and deployment*, set **Source** to `Deploy from a branch`
+3. Branch: `main`, folder: `/ (root)` → **Save**
+4. Wait a minute, then open `https://<your-username>.github.io/<repo-name>/`
+
+### Option B — GitHub Codespaces
+
+Click the green **Code** button → **Codespaces** → **Create codespace on main**.
+The dev container (`.devcontainer/`) starts a local web server on port **8000** automatically and opens the app in your browser.
+
+> Tip: in Codespaces you can also just right-click `index.html` → *Open with Live Server* if you have that extension.
+
+### Option C — run locally
+
+No build step, no installs:
+
+```bash
+git clone https://github.com/umairyusufnurgat-cloud/jotter.git
+cd jotter
+python3 -m http.server 8000
+# → http://localhost:8000
+```
+
+(Or use any static server: `npx serve`, `php -S localhost:8000`, VS Code Live Server…)
+
+## ⌨️ Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `N` | New note (when not typing) |
+| `Ctrl`/`⌘` + `Alt` + `N` | New note (from anywhere) |
+| `/` or `Ctrl`/`⌘` + `F` | Focus search |
+| `Ctrl`/`⌘` + `E` | Cycle view: Edit → Split → Preview |
+| `Ctrl`/`⌘` + `B` / `I` | Bold / italic (wraps selection) |
+| `Tab` / `Shift + Tab` | Indent / outdent lines in the editor |
+| `Enter` | Continue lists & checkboxes automatically |
+| `Ctrl`/`⌘` + `S` | Force save |
+| `Esc` | Close menus / sidebar |
+
+## 📝 Markdown support
+
+Headings, **bold**, *italic*, ~~strikethrough~~, `inline code`, fenced code blocks (with language label), blockquotes, nested ordered/unordered lists, task lists, tables (with alignment), links, images, autolinks, horizontal rules, and backslash escapes — all rendered by a ~250-line hand-written parser in [`markdown.js`](markdown.js). No libraries, no CDN.
+
+## 💾 Where are my notes?
+
+In your browser's **local storage** — which means:
+
+- ✅ They're private and work offline
+- ⚠️ They're tied to the browser + device you used (clearing site data deletes them)
+
+So **use Backup regularly** (sidebar → *Backup*) and keep the JSON file somewhere safe. *Restore* merges a backup into any browser — it's also how you move notes between devices.
+
+## 🛠 Tech
+
+- Vanilla HTML / CSS / JS — **zero dependencies, zero build step**
+- ~250-line custom markdown renderer with HTML escaping + URL sanitisation
+- Service worker for offline use & PWA installability
+- LocalStorage persistence (with an in-memory fallback for sandboxed previews)
+- Dev container for Codespaces
+
+```
+├── index.html            # app shell
+├── styles.css            # full design system (light + dark, responsive, print)
+├── markdown.js           # markdown → HTML renderer
+├── app.js                # app logic (state, editor, storage, export…)
+├── service-worker.js     # offline cache (bump CACHE when you change files)
+├── manifest.webmanifest  # PWA manifest
+├── assets/               # icon + banner
+└── .devcontainer/        # Codespaces config
+```
+
+## 🤝 Contributing
+
+Issues and PRs are welcome! It's plain HTML/CSS/JS — clone, open `index.html` in a browser (or run a static server), and hack away.
+
+## 📄 License
+
+[MIT](LICENSE) — free to use, fork, and make your own.
