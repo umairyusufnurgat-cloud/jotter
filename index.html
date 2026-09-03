@@ -445,7 +445,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="calendar"></span><div class="bg-txt"><b>Today&rsquo;s journal</b> &mdash; dated entry with a journal template; the &#128293; streak appears after 2+ days in a row</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="search"></span><div class="bg-txt"><b>Search</b> &mdash; live search across titles, text and tags (<kbd>/</kbd>); matches are highlighted</div></div>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tag chips</b> &mdash; click to filter by a tag; <b>right-click</b> to rename it or remove it from all notes</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; file notes into folders (More &#9662; &rarr; Move to folder, or drag a card onto one); click to filter, right-click to rename or delete</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; file notes into folders (More &#9662; &rarr; Move to folder, or drag a card onto one). The list shows unfiled notes; open a folder to see its notes, or <b>All notes</b> for everything. Right-click to rename or delete</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days)</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="panelLeft"></span><div class="bg-txt"><b>Resize / hide sidebar</b> &mdash; drag the sidebar&rsquo;s right edge to resize it; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or use the &#9776; toolbar button to hide it entirely</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="graph"></span><div class="bg-txt"><b>Note graph</b> &mdash; your notes as a map of [[wiki-links]]; drag, zoom and pan it, click a bubble to open the note</div></div>
@@ -476,7 +476,15 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.11 <span class="pill">current</span></h4>
+            <h4>v1.11.1 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128027; <b>Fixed</b>: after opening a note, the other notes in the sidebar wouldn&rsquo;t open at all</li>
+              <li>&#128193; <b>Folders now behave like real folders</b> &mdash; the notes list shows your <b>unfiled</b> notes; filed notes live inside their folder (open it in the sidebar&rsquo;s Folders section). The <b>All notes</b> row shows everything at once, and search &amp; tags still find notes in every folder</li>
+              <li>&#128027; <b>Fixed</b>: collapsing the Folders section now actually collapses it</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.11 &mdash; folders</h4>
             <ul>
               <li>&#128193; <b>Folders</b> &mdash; group your notes into folders: assign them from <b>More &#9662; &rarr; Move to folder</b> (or the command palette), then browse and filter in the new <b>Folders</b> section of the sidebar. On desktop you can even <b>drag note cards onto a folder</b> to file them</li>
               <li>&#128269; Click a folder to see only its notes (with search and tags still working on top); new notes you create while inside a folder land in it automatically</li>

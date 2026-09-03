@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.11.1 — folder fixes 🐛
+
+- 🐛 **Fixed: notes wouldn't open** — a malformed attribute in the note-card markup (introduced with drag-and-drop in v1.11) broke every card's id, so after the app restored your last note, clicking any other note did nothing. Caught with a real in-browser-equivalent test harness (jsdom) that now clicks through the actual UI
+- 📁 **Folders now behave like real folders** — the main notes list shows your **unfiled** notes; a note you file into a folder disappears from the list and lives inside that folder (open it in the sidebar). A persistent **All notes** row shows every note at once, and search & tags look inside all folders so nothing gets lost
+- 🐛 **Fixed: collapsing the Folders section** now actually collapses it (a CSS `display:flex` was overriding the hidden state)
+
 ## v1.11 — folders 📁
 
 - 📁 **Folders** — file notes into folders to keep a growing notebook tidy: **More ▾ → Move to folder…** (or `Ctrl`+`K`) opens a picker with your folders, a "create & move" field, and a one-click *No folder* option. Folders appear in a collapsible **Folders** section at the top of the sidebar with live counts

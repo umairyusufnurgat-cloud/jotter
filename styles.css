@@ -1471,3 +1471,8 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
   .folder-new input { flex: 1 1 150px; }
   .folder-pick { max-height: 40vh; }
 }
+
+/* ============================================================
+   v1.11.1 — folder fixes: real file-model semantics
+   ============================================================ */
+.folders-list[hidden] { display: none; } /* display:flex would otherwise ignore the hidden attr */

@@ -111,7 +111,8 @@
     lockS: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 13),
     lockBig: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 30),
     folder: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', 16),
-    folderS: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', 13)
+    folderS: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', 13),
+    fileS: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', 13)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -146,7 +147,7 @@
   /* ---------------- state ---------------- */
   var notes = [];
   var settings = { theme: null, sort: 'updated', view: 'split', lastId: null, accent: 'indigo', sideWidth: 302, sideCollapsed: false };
-  var ui = { activeId: null, search: '', tag: null, folder: null, trash: false, cal: false, calMonth: new Date(), calDay: null };
+  var ui = { activeId: null, search: '', tag: null, folder: null, all: false, trash: false, cal: false, calMonth: new Date(), calDay: null };
   var dirty = false;
   var purgeArm = { id: null, t: null };
   var wikiPop = { open: false, items: [], sel: 0, startIdx: 0, caret: 0 };
@@ -363,7 +364,7 @@
     var cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     var removed = notes.filter(function (n) { return n.deleted && n.deletedAt && n.deletedAt < cutoff; });
     if (removed.length) {
-      removed.forEach(function (n) { recordPurge(n.id); });
+      recordPurge(removed.map(function (n) { return n.id; }));
       notes = notes.filter(function (n) { return removed.indexOf(n) === -1; });
       persist(); persistPurged();
     }
@@ -401,7 +402,11 @@
       });
     }
     if (!ui.trash && ui.tag) list = list.filter(function (n) { return n.tags.indexOf(ui.tag) !== -1; });
-    if (!ui.trash && ui.folder) list = list.filter(function (n) { return n.folder === ui.folder; });
+    if (!ui.trash) {
+      if (ui.folder) list = list.filter(function (n) { return n.folder === ui.folder; });
+      // home shows only unfiled notes once folders exist — but search/tags look everywhere
+      else if (!ui.all && !q && !ui.tag && folderExists()) list = list.filter(function (n) { return !n.folder; });
+    }
 
     if (ui.trash) {
       return list.sort(function (a, b) { return (b.deletedAt || 0) - (a.deletedAt || 0); });
@@ -509,9 +514,9 @@
         ICONS.trashS + '<span>' + (armed ? 'Sure?' : 'Delete') + '</span></button>' +
         '</div>';
     }
-    return '<div class="note-card' + (active ? ' active' : '') + (ui.trash ? ' trashed' : '') + '" data-id="' + n.id +
+    return '<div class="note-card' + (active ? ' active' : '') + (ui.trash ? ' trashed' : '') + '" data-id="' + n.id + '"' +
       (ui.trash ? '' : ' draggable="true"') +
-      '" role="button" tabindex="0" aria-label="' + escapeHtml(title) + '">' +
+      ' role="button" tabindex="0" aria-label="' + escapeHtml(title) + '">' +
       '<div class="nc-top"><span class="nc-title">' + hi(title) + '</span>' +
       (icons ? '<span class="nc-icons">' + icons + '</span>' : '') + '</div>' +
       (snip ? '<div class="nc-snippet">' + hi(snip) + '</div>' : '') +
@@ -524,8 +529,10 @@
     var list = visibleNotes();
     if (!list.length) {
       var msg = ui.trash ? 'Trash is empty.<br>Deleted notes rest here for 30 days.'
-        : (ui.search.trim() || ui.tag || ui.folder) ? (ui.folder && !ui.search.trim() && !ui.tag ? 'No notes in this folder yet.<br>Create one — it lands right here.' : 'No notes match your filters.')
-        : 'No notes yet — create your first one!';
+        : (ui.search.trim() || ui.tag) ? 'No notes match your filters.'
+        : ui.folder ? 'No notes in this folder yet.<br>Create one — it lands right here.'
+        : (ui.all || !folderExists()) ? 'No notes yet — create your first one!'
+        : 'All your notes are in folders.<br>Open one above — or view All notes.';
       notesList.innerHTML = '<div class="list-empty">' + ICONS.search + '<p>' + msg + '</p></div>';
       return;
     }
@@ -533,7 +540,7 @@
   }
 
   function updateEmptyState() {
-    var filtering = ui.search.trim() || ui.tag || ui.folder;
+    var filtering = ui.search.trim() || ui.tag || ui.folder || ui.all;
     if (ui.trash) {
       emptyTitle.textContent = 'Trash is empty';
       emptyText.textContent = 'Notes you delete rest here for 30 days before being removed forever.';
@@ -542,9 +549,14 @@
     } else if (filtering) {
       emptyTitle.textContent = 'Nothing found';
       var what = (ui.folder ? '\uD83D\uDCC1 ' + ui.folder : '') + (ui.tag ? (ui.folder ? ' · ' : '') + '#' + ui.tag : '') + (ui.search.trim() ? ' \u201C' + ui.search.trim() + '\u201D' : '');
-      emptyText.textContent = 'No notes match ' + what.trim() + '.';
+      emptyText.textContent = 'No notes match ' + (what.trim() || 'these filters') + '.';
       emptyNewBtn.hidden = emptyDailyBtn.hidden = true;
-      clearFiltersBtn.hidden = false;
+      clearFiltersBtn.hidden = !ui.search.trim() && !ui.tag;
+    } else if (folderExists()) {
+      emptyTitle.textContent = 'Nothing unfiled';
+      emptyText.textContent = 'All your notes live in folders — pick one in the sidebar, or click All notes to see everything.';
+      emptyNewBtn.hidden = emptyDailyBtn.hidden = false;
+      clearFiltersBtn.hidden = true;
     } else {
       emptyTitle.textContent = 'Welcome to Jotter';
       emptyText.textContent = 'Capture ideas, keep a daily journal, and organise everything with tags — all private, right in your browser.';
@@ -1205,9 +1217,11 @@
   });
 
   notesViewBtn.addEventListener('click', function () {
-    if (!ui.trash && !ui.cal) return;
+    if (!ui.trash && !ui.cal && !ui.folder && !ui.all) return;
     ui.trash = false;
     ui.cal = false;
+    ui.folder = null; // the Notes tab is the way home: back to unfiled notes
+    ui.all = false;
     var n = getNote(ui.activeId);
     if (!n || n.deleted) ui.activeId = null;
     renderAll();
@@ -1228,7 +1242,6 @@
   clearFiltersBtn.addEventListener('click', function () {
     ui.search = '';
     ui.tag = null;
-    ui.folder = null;
     searchInput.value = '';
     renderSidebar();
     if (!getNote(ui.activeId)) renderEditor();
@@ -1930,7 +1943,7 @@
       Object.keys(folderCounts()).sort(function (a, b) { return a.localeCompare(b); }).slice(0, 6).forEach(function (f) {
         if (!q || f.toLowerCase().indexOf(q) !== -1) {
           folderItems.push({ type: 'action', label: f, sub: 'Go to folder', icon: ICONS.folderS, run: function () {
-            ui.folder = f; ui.trash = false; ui.cal = false; renderAll();
+            ui.folder = f; ui.all = false; ui.trash = false; ui.cal = false; renderAll();
           } });
         }
       });
@@ -2211,7 +2224,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.11 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.11.1 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2419,6 +2432,9 @@
 
   /* ---------- folders ---------- */
   var foldersOpen = true;
+  function folderExists() {
+    return notes.some(function (n) { return !n.deleted && !!n.folder; });
+  }
   function folderCounts() {
     var counts = {};
     notes.forEach(function (n) {
@@ -2442,11 +2458,11 @@
     foldersHead.setAttribute('aria-expanded', String(foldersOpen));
     foldersList.hidden = !foldersOpen;
     var counts = folderCounts();
-    var html = '';
-    if (ui.folder) {
-      html += '<button class="folder-row all" data-folder="">'
-        + '<span class="fr-ico">' + ICONS.folderS + '</span><span class="fr-name">All notes</span></button>';
-    }
+    var total = notes.filter(function (n) { return !n.deleted; }).length;
+    var html = '<button class="folder-row all' + (ui.all && !ui.folder ? ' active' : '') + '" data-folder=""'
+      + ' title="Every note, filed or not">' +
+      '<span class="fr-ico">' + ICONS.fileS + '</span><span class="fr-name">All notes</span>' +
+      '<span class="fr-count">' + total + '</span></button>';
     html += names.map(function (f) {
       var active = ui.folder === f;
       return '<button class="folder-row' + (active ? ' active' : '') + '" data-folder="' + escapeHtml(f) + '">'
@@ -2463,7 +2479,14 @@
     var row = e.target.closest ? e.target.closest('[data-folder]') : null;
     if (!row) return;
     var f = row.getAttribute('data-folder');
-    ui.folder = f ? (ui.folder === f ? null : f) : null; // '' row = All notes → clear
+    if (!f) { // "All notes"
+      if (ui.all && !ui.folder) { ui.all = false; } // clicking the active row returns to unfiled home
+      else { ui.all = true; ui.folder = null; }
+    } else if (ui.folder === f) {
+      ui.folder = null; ui.all = false; // toggle the active folder off → home
+    } else {
+      ui.folder = f; ui.all = false;
+    }
     renderAll();
   });
   foldersList.addEventListener('contextmenu', function (e) {
@@ -3462,11 +3485,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '12') {
-      store.set(VER_KEY, '12');
+    if (ver !== '13') {
+      store.set(VER_KEY, '13');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.11 \u2014 folders: group notes, drag cards onto folders, filter by folder', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.11.1 \u2014 fixed: notes not opening after the first click; folders now behave like real folders (home shows unfiled notes, All notes shows everything)', { timeout: 8000 });
         }, 700);
       }
     }
