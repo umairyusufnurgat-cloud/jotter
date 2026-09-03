@@ -169,6 +169,9 @@
               <button id="duplicateBtn" data-icon="copy"><span>Duplicate</span></button>
               <button id="copyMdBtn" data-icon="copy"><span>Copy markdown</span></button>
               <hr />
+              <button id="histBtn" data-icon="undo"><span>Version history</span></button>
+              <button id="shareBtn" data-icon="link"><span>Share as link</span></button>
+              <hr />
               <button id="trashCurrentBtn" class="danger" data-icon="trash"><span>Move to trash</span></button>
             </div>
           </div>
@@ -276,6 +279,30 @@
     </div>
   </div>
 
+  <!-- ======================= VERSION HISTORY MODAL ======================= -->
+  <div class="modal-overlay" id="histOverlay" hidden>
+    <div class="modal hist-modal" role="dialog" aria-modal="true" aria-label="Version history">
+      <div class="modal-head">
+        <h2>Version history</h2>
+        <button class="icon-btn" id="histCloseBtn" data-icon="x" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="hist-bar">
+          <span class="stat-hint" id="histNote"></span>
+          <button class="btn small ghost" id="histSnapBtn" data-icon="plusL"><span>Save a snapshot now</span></button>
+        </div>
+        <div class="hist-list" id="histList"></div>
+        <div class="hist-preview" id="histPreview" hidden>
+          <div class="hist-preview-head">
+            <b id="histPreviewTitle"></b>
+            <button class="btn small primary" id="histRestoreBtn"><span>Restore this version</span></button>
+          </div>
+          <div class="hist-md markdown-body" id="histMd"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ======================= HELP MODAL ======================= -->
   <div class="modal-overlay" id="helpOverlay" hidden>
     <div class="modal help-modal" role="dialog" aria-modal="true" aria-label="Help and guide">
@@ -332,7 +359,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="pin"></span><div class="bg-txt"><b>Pin</b> &mdash; keep this note at the top of the list</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Download</b> &mdash; save this note as a <code>.md</code> file</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="printer"></span><div class="bg-txt"><b>Print</b> &mdash; print or save as PDF with clean print styles</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, or move it to trash</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, browse its version history, share it as a link, or move it to trash</div></div>
 
           <h4>In the editor</h4>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tags</b> &mdash; type a name and press <kbd>&#8629;</kbd>; click &times; on a chip to remove it</div></div>
@@ -346,7 +373,14 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.6 <span class="pill">current</span></h4>
+            <h4>v1.7 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128338; <b>Version history</b> &mdash; Jotter snapshots your note automatically every ~10 minutes while you edit (More &#9662; &rarr; Version history). Preview any version and restore it in one click &mdash; restoring keeps a snapshot first, so it&rsquo;s always undoable</li>
+              <li>&#128279; <b>Share a note as a link</b> &mdash; More &#9662; &rarr; Share as link copies a URL that carries the note inside it; anyone who opens it gets a copy in their Jotter. No account, no server &mdash; perfect for sending a note to your phone</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.6 &mdash; sidebar overhaul, calendar, fixes</h4>
             <ul>
               <li>&#128207; <b>Resizable &amp; hideable sidebar</b> &mdash; drag its right edge to any width you like; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or click the &#9776; toolbar button to hide it and write full-width</li>
               <li>&#128197; <b>Calendar view</b> &mdash; Notes &#9662; Calendar shows a month grid of your writing; click a day to see what you wrote or start that day&rsquo;s entry</li>

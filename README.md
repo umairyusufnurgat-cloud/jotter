@@ -32,6 +32,8 @@
 - 📊 **Notebook insights** — words written, journaling streak, activity charts, top tags and storage usage
 - 🗓 **Calendar view** — month grid of your writing activity; click a day to see or start that day's entry
 - 📏 **Resizable, hideable sidebar** — drag its edge to resize; `Ctrl`/`⌘`+`\` hides it for distraction-free writing
+- 🕰 **Version history** — automatic snapshots while you edit; preview and restore any of the last 10 versions (More ▾)
+- 🔗 **Share a note as a link** — the whole note rides inside the URL; opening it on any device saves a copy — no account, no server
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags — with match highlighting

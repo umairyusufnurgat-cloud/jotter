@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7 — version history & share-as-link
+
+- 🕰 **Version history** — Jotter snapshots the note you're editing automatically (at most one every ~10 minutes, only when something changed). Open *More ▾ → Version history* to browse the last 10 versions, preview any of them rendered, and restore in one click — restoring saves a snapshot of the current state first, so it's always undoable. Snapshots travel with backups and sync, and total snapshot storage is capped (~1.5 MB, oldest pruned first)
+- 🔗 **Share a note as a link** — *More ▾ → Share as link* copies a URL that carries the whole note inside it; anyone who opens it (on any device, no account needed) gets a copy saved to their Jotter. Text notes only — image-heavy notes are redirected to Backup/Sync
+- 📊 Insights now show how many version snapshots are stored and how much space they use
+
 ## v1.6 — sidebar overhaul, calendar, fixes
 
 - 🐛 **Fixed the accent-colour menu** opening partly off the left edge of the screen (same root cause as the v1.5 Backup-menu fix — menus now anchor to their full button row)

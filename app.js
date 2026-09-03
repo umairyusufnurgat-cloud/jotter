@@ -103,7 +103,8 @@
     chart: svg('<line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="9"/><path d="M2 20h20"/>', 16),
     chevLeft: svg('<polyline points="15 18 9 12 15 6"/>', 16),
     chevRight: svg('<polyline points="9 18 15 12 9 6"/>', 16),
-    panelLeft: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/>', 16)
+    panelLeft: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/>', 16),
+    link: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', 16)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -163,6 +164,9 @@
   var wikiPopEl = $('#wikiPop'), streakBadge = $('#streakBadge');
   var settingsBtn = $('#settingsBtn'), settingsOverlay = $('#settingsOverlay'), settingsCloseBtn = $('#settingsCloseBtn');
   var statsBtn = $('#statsBtn'), statsOverlay = $('#statsOverlay'), statsCloseBtn = $('#statsCloseBtn'), statsBody = $('#statsBody');
+  var histOverlay = $('#histOverlay'), histCloseBtn = $('#histCloseBtn'), histNote = $('#histNote'), histSnapBtn = $('#histSnapBtn');
+  var histList = $('#histList'), histPreview = $('#histPreview'), histPreviewTitle = $('#histPreviewTitle');
+  var histRestoreBtn = $('#histRestoreBtn'), histMd = $('#histMd'), histBtn = $('#histBtn'), shareBtn = $('#shareBtn');
   var syncTokenInput = $('#syncTokenInput'), syncSaveBtn = $('#syncSaveBtn'), syncStatus = $('#syncStatus');
   var syncNowBtn = $('#syncNowBtn'), syncAutoChk = $('#syncAutoChk'), syncDisconnectBtn = $('#syncDisconnectBtn'), aboutInfo = $('#aboutInfo');
   var promptOverlay = $('#promptOverlay'), promptTitle = $('#promptTitle'), promptInput = $('#promptInput');
@@ -203,7 +207,12 @@
       createdAt: +raw.createdAt || Date.now(),
       updatedAt: +raw.updatedAt || +raw.createdAt || Date.now(),
       deleted: !!raw.deleted,
-      deletedAt: +raw.deletedAt || null
+      deletedAt: +raw.deletedAt || null,
+      history: (Array.isArray(raw.history) ? raw.history : []).filter(function (h) {
+        return h && typeof h === 'object' && typeof h.body === 'string' && +h.ts;
+      }).map(function (h) {
+        return { ts: +h.ts, title: typeof h.title === 'string' ? h.title.slice(0, 200) : '', body: h.body };
+      }).slice(0, 10)
     };
   }
 
@@ -624,7 +633,8 @@
       createdAt: now,
       updatedAt: now,
       deleted: false,
-      deletedAt: null
+      deletedAt: null,
+      history: []
     };
     notes.unshift(note);
     persist();
@@ -760,6 +770,7 @@
     n.title = titleInput.value.slice(0, 200);
     n.body = editorArea.value;
     n.updatedAt = Date.now();
+    pushHistory(n);
     persist();
     dirty = false;
     saveStatus.textContent = 'Saved ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1446,6 +1457,7 @@
     else if (e.key === 'Escape') {
       if (!ctxMenu.hidden) ctxMenu.hidden = true;
       else if (!promptOverlay.hidden) closePrompt();
+      else if (!histOverlay.hidden) closeHist();
       else if (!statsOverlay.hidden) closeStats();
       else if (!settingsOverlay.hidden) closeSettings();
       else if (!helpOverlay.hidden) closeHelp();
@@ -1779,6 +1791,8 @@
     if (sync.token) A('Sync notes now', '', ICONS.cloud, function () { syncNow(false); });
     A('Backup notes (JSON)', '', ICONS.download, function () { exportBackup(); });
     A('Notebook insights', '', ICONS.chart, function () { openStats(); });
+    A('Version history', '', ICONS.undo, function () { openHist(); });
+    A('Share note as link', '', ICONS.link, function () { shareNoteLink(); });
     A('Toggle sidebar', 'Ctrl \\', ICONS.panelLeft, function () { toggleSidebar(); });
     A('Open calendar', '', ICONS.calendar, function () { ui.cal = true; ui.trash = false; renderAll(); closeMobileSidebar(); });
     A('Export all notes as Markdown', '', ICONS.fileText, function () { exportAllMd(); });
@@ -2096,7 +2110,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.6 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.7 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2290,6 +2304,159 @@
     toast('Removed tag from ' + count + ' note' + (count === 1 ? '' : 's'));
   }
 
+  /* ---------- version history ---------- */
+  var HIST_MAX_PER = 10, HIST_BYTE_CAP = 1572864; // ~1.5 MB of snapshots in total
+  var histNoteId = null, histSelTs = 0;
+
+  function pushHistory(n, force) {
+    if (!n) return;
+    var now = Date.now();
+    var last = n.history && n.history[0];
+    if (!force && last && now - last.ts < 10 * 60000) return;   // at most one snapshot per ~10 min
+    if (!force && last && last.body === n.body && last.title === n.title) return; // nothing changed
+    n.history = Array.isArray(n.history) ? n.history : [];
+    n.history.unshift({ ts: now, title: n.title, body: n.body });
+    if (n.history.length > HIST_MAX_PER) n.history.length = HIST_MAX_PER;
+    pruneHistory();
+  }
+  function pruneHistory() {
+    var total = 0;
+    notes.forEach(function (n) {
+      (n.history || []).forEach(function (h) { total += h.body.length; });
+    });
+    var guard = 0;
+    while (total > HIST_BYTE_CAP && guard++ < 1000) {
+      var target = null; // always drop the single largest oldest snapshot — frees the most, touches the fewest notes
+      notes.forEach(function (n) {
+        if (!n.history || !n.history.length) return;
+        var tail = n.history[n.history.length - 1];
+        if (!target || tail.body.length > target.history[target.history.length - 1].body.length) target = n;
+      });
+      if (!target) break;
+      total -= target.history[target.history.length - 1].body.length;
+      target.history.pop();
+    }
+  }
+
+  function openHist() {
+    var n = getNote(ui.activeId);
+    if (!n || n.deleted) { toast('Open a note first'); return; }
+    histNoteId = n.id;
+    histSelTs = 0;
+    histOverlay.hidden = false;
+    renderHist();
+  }
+  function closeHist() {
+    histOverlay.hidden = true;
+    histNoteId = null;
+    histSelTs = 0;
+  }
+  function renderHist() {
+    var n = getNote(histNoteId);
+    if (!n) { closeHist(); return; }
+    histNote.textContent = (n.title || 'Untitled') + ' — snapshotted automatically while you edit';
+    if (!n.history || !n.history.length) {
+      histList.innerHTML = '<p class="cal-hint">No snapshots yet — one is kept automatically every ~10 minutes while you edit (and before every restore). The last 10 versions survive here.</p>';
+      histPreview.hidden = true;
+      return;
+    }
+    histList.innerHTML = n.history.map(function (h) {
+      var d = new Date(h.ts);
+      var words = (String(h.body).trim().match(/\S+/g) || []).length;
+      return '<button class="hist-item' + (h.ts === histSelTs ? ' sel' : '') + '" data-ts="' + h.ts + '">' +
+        '<span class="hist-when">' + d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ', ' +
+        d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '</span>' +
+        '<span class="hist-meta">' + words.toLocaleString() + ' words · ' + kbFmt(h.body.length) + '</span></button>';
+    }).join('');
+    renderHistPreview();
+  }
+  function renderHistPreview() {
+    var n = getNote(histNoteId);
+    var h = n && n.history && n.history.filter(function (x) { return x.ts === histSelTs; })[0];
+    if (!h) { histPreview.hidden = true; return; }
+    histPreview.hidden = false;
+    histPreviewTitle.textContent = 'From ' + new Date(h.ts).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    histMd.innerHTML = window.JotterMD.render(h.body);
+    histMd.scrollTop = 0;
+  }
+  histBtn.addEventListener('click', function () { noteMenu.hidden = true; openHist(); });
+  histCloseBtn.addEventListener('click', closeHist);
+  histOverlay.addEventListener('click', function (e) { if (e.target === histOverlay) closeHist(); });
+  histSnapBtn.addEventListener('click', function () {
+    var n = getNote(histNoteId);
+    if (!n) return;
+    pushHistory(n, true);
+    persist();
+    renderHist();
+    toast('Snapshot saved');
+  });
+  histList.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-ts]') : null;
+    if (!b) return;
+    var ts = +b.getAttribute('data-ts');
+    histSelTs = (histSelTs === ts) ? 0 : ts;
+    renderHist();
+  });
+  histRestoreBtn.addEventListener('click', function () {
+    var n = getNote(histNoteId);
+    var h = n && n.history && n.history.filter(function (x) { return x.ts === histSelTs; })[0];
+    if (!n || !h) return;
+    pushHistory(n, true); // keep the current state first — restoring is itself undoable
+    n.title = h.title;
+    n.body = h.body;
+    n.updatedAt = Date.now();
+    persist();
+    closeHist();
+    renderAll();
+    toast('Restored version from ' + new Date(h.ts).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }));
+  });
+
+  /* ---------- share a note as a link ---------- */
+  function encodeShare(n) {
+    var json = JSON.stringify({ t: n.title || '', b: n.body || '', g: Array.isArray(n.tags) ? n.tags.slice(0, 12) : [] });
+    return btoa(unescape(encodeURIComponent(json)));
+  }
+  function decodeShare(b64) {
+    try {
+      if (!/^[A-Za-z0-9+/=]+$/.test(b64) || b64.length > 200000) return null;
+      var p = JSON.parse(decodeURIComponent(escape(atob(b64))));
+      if (!p || typeof p !== 'object' || typeof p.b !== 'string') return null;
+      return {
+        t: typeof p.t === 'string' ? p.t.slice(0, 200) : '',
+        b: p.b.slice(0, 500000),
+        g: Array.isArray(p.g) ? p.g.filter(function (t) { return typeof t === 'string'; }).slice(0, 12) : []
+      };
+    } catch (e) { return null; }
+  }
+  function shareNoteLink() {
+    var n = getNote(ui.activeId);
+    if (!n || n.deleted) { toast('Open a note first'); return; }
+    var url = location.origin + location.pathname + '#n=' + encodeShare(n);
+    if (url.length > 30000) {
+      toast('This note is too large to share as a link (embedded images?) — use Backup or Sync instead', { timeout: 6000 });
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        toast('Link copied — opening it saves a copy of this note in Jotter');
+      }, function () { showShareFallback(url); });
+    } else showShareFallback(url);
+  }
+  function showShareFallback(url) {
+    openPromptModal('Copy this share link', url, 'Done', function () {});
+  }
+  function importSharedNote() {
+    var m = /^#n=([A-Za-z0-9+/=]+)$/.exec(location.hash || '');
+    if (!m) return false;
+    var p = decodeShare(m[1]);
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
+    if (!p) { toast('That shared link looked invalid'); return false; }
+    createNote({ title: p.t || 'Shared note', tags: p.g, body: p.b });
+    toast('Received a shared note — saved to your notebook');
+    return true;
+  }
+  shareBtn.addEventListener('click', function () { noteMenu.hidden = true; shareNoteLink(); });
+
   /* ---------- notebook insights ---------- */
   function noteWords(n) { return (String(n.body || '').trim().match(/\S+/g) || []).length; }
   function truncTxt(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '\u2026' : s; }
@@ -2307,6 +2474,10 @@
     });
     var streak = journalStreak();
     var localBytes = JSON.stringify(notes).length;
+    var histCount = 0, histBytes = 0;
+    notes.forEach(function (n) {
+      (n.history || []).forEach(function (h) { histCount++; histBytes += h.body.length; });
+    });
 
     /* last 14 days of activity (created or last edited) */
     var days = [], dmax = 1;
@@ -2396,6 +2567,7 @@
         '<p class="stat-hint" id="storeEstimate">Checking browser storage\u2026</p>' +
         '<p class="stat-hint">Notes stored in this browser: ' + kbFmt(localBytes) +
         (withImages ? ' \u00B7 ' + withImages + ' note' + (withImages === 1 ? '' : 's') + ' contain embedded images' : '') + '</p>' +
+        '<p class="stat-hint">Version snapshots: ' + histCount + (histCount ? ' \u00B7 ' + kbFmt(histBytes) + ' (auto-pruned)' : '') + '</p>' +
       '</section>'
     );
   }
@@ -2551,6 +2723,7 @@
     });
     loadSync();
     load();
+    importSharedNote();
     if (settings.sideWidth) document.documentElement.style.setProperty('--side-w', settings.sideWidth + 'px');
     if (settings.sideCollapsed) document.body.classList.add('side-collapsed');
     updateSideNarrow();
@@ -2565,11 +2738,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '7') {
-      store.set(VER_KEY, '7');
+    if (ver !== '8') {
+      store.set(VER_KEY, '8');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.6 \u2014 resizable & hideable sidebar, Calendar view, accent-menu fix', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.7 \u2014 version history (More \u25BE) & share notes as links', { timeout: 6500 });
         }, 700);
       }
     }
