@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.12 — folders, naturally 🧭
+
+- 🧭 **Location bar** — a bar above the notes list always shows where you are: **Notes** (home), the folder you're in, or **All notes**, with a live count, a **◀ back** button, and — inside a folder — a **+** to create a note right there. No more "where am I / how do I get back?"
+- 🖱 **Right-click any note card** for quick actions, without opening it: **one-click moves** to your folders (up to six listed), remove from folder, or the full picker; plus pin, star, duplicate and move to trash
+- 📱 **Long-press a card on touch** for the same menu (with a little haptic buzz where supported)
+- ➕ **Hover a folder** in the sidebar for a **+** to create a note inside it without navigating there
+- 🐛 Duplicating a note now **keeps its folder**; the Folders section **remembers** whether you collapsed it
+
 ## v1.11.1 — folder fixes 🐛
 
 - 🐛 **Fixed: notes wouldn't open** — a malformed attribute in the note-card markup (introduced with drag-and-drop in v1.11) broke every card's id, so after the app restored your last note, clicking any other note did nothing. Caught with a real in-browser-equivalent test harness (jsdom) that now clicks through the actual UI

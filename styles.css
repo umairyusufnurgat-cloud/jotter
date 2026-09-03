@@ -1476,3 +1476,47 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
    v1.11.1 — folder fixes: real file-model semantics
    ============================================================ */
 .folders-list[hidden] { display: none; } /* display:flex would otherwise ignore the hidden attr */
+
+/* ============================================================
+   v1.12 — folders, naturally: location bar, card context menu,
+   quick-create on folder rows
+   ============================================================ */
+.loc-bar {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 8px 8px; border-bottom: 1px solid var(--border);
+  margin-bottom: 6px; min-height: 34px; box-sizing: border-box;
+}
+.loc-bar .icon-btn { width: 26px; height: 26px; flex: none; }
+.loc-ico { display: inline-flex; color: var(--accent); }
+.loc-name {
+  font-size: 13.5px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.loc-count {
+  flex: none; font-size: 10.5px; color: var(--text-muted);
+  background: var(--bg-hover); border-radius: 99px; padding: 1px 7px;
+}
+.loc-spacer { flex: 1; }
+
+/* quick-create button on folder rows (desktop hover; mobile uses the location bar's +) */
+.fr-plus {
+  display: none; flex: none;
+  width: 20px; height: 20px; line-height: 1;
+  border: 1px solid var(--border-strong); border-radius: 6px;
+  background: var(--bg-elev); color: var(--text-muted);
+  font-size: 14px; cursor: pointer; padding: 0;
+  align-items: center; justify-content: center;
+}
+.fr-plus:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+@media (min-width: 641px) {
+  .folder-row { position: relative; }
+  .folder-row:hover .fr-plus, .folder-row:focus-within .fr-plus { display: inline-flex; }
+}
+
+/* cards: no text-selection callouts during long-press / drag */
+.note-card { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+@media (max-width: 640px) {
+  .loc-bar { padding: 2px 4px 6px; gap: 5px; }
+  .loc-name { font-size: 13px; }
+}

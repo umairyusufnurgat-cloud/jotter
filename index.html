@@ -85,7 +85,6 @@
         </button>
         <div class="folders-list" id="foldersList"></div>
       </div>
-
       <div class="cal-panel" id="calPanel" hidden>
         <div class="cal-head">
           <button class="icon-btn" id="calPrevBtn" data-icon="chevLeft" aria-label="Previous month"></button>
@@ -98,6 +97,15 @@
       </div>
 
       <div class="tag-filters" id="tagFilters"></div>
+
+      <div class="loc-bar" id="locBar" hidden>
+        <button class="icon-btn" id="locBackBtn" data-icon="chevLeft" aria-label="Back to notes" hidden></button>
+        <span class="loc-ico" id="locIco"></span>
+        <b class="loc-name" id="locName">Notes</b>
+        <span class="loc-count" id="locCount"></span>
+        <span class="loc-spacer"></span>
+        <button class="icon-btn" id="locNewBtn" data-icon="filePlus" title="New note in this folder" aria-label="New note in this folder" hidden></button>
+      </div>
 
       <nav class="notes-list" id="notesList" role="list" aria-label="Notes"></nav>
 
@@ -445,7 +453,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="calendar"></span><div class="bg-txt"><b>Today&rsquo;s journal</b> &mdash; dated entry with a journal template; the &#128293; streak appears after 2+ days in a row</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="search"></span><div class="bg-txt"><b>Search</b> &mdash; live search across titles, text and tags (<kbd>/</kbd>); matches are highlighted</div></div>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tag chips</b> &mdash; click to filter by a tag; <b>right-click</b> to rename it or remove it from all notes</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; file notes into folders (More &#9662; &rarr; Move to folder, or drag a card onto one). The list shows unfiled notes; open a folder to see its notes, or <b>All notes</b> for everything. Right-click to rename or delete</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; file notes into folders: <b>right-click a note card</b> (long-press on touch) for one-click moves, or drag a card onto a folder, or More &#9662; &rarr; Move to folder. The list shows unfiled notes; the location bar above it shows where you are and how to get back</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days)</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="panelLeft"></span><div class="bg-txt"><b>Resize / hide sidebar</b> &mdash; drag the sidebar&rsquo;s right edge to resize it; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or use the &#9776; toolbar button to hide it entirely</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="graph"></span><div class="bg-txt"><b>Note graph</b> &mdash; your notes as a map of [[wiki-links]]; drag, zoom and pan it, click a bubble to open the note</div></div>
@@ -476,7 +484,16 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.11.1 <span class="pill">current</span></h4>
+            <h4>v1.12 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128205; <b>Location bar</b> &mdash; a bar above the notes list always shows where you are (<b>Notes</b> home, a folder, or All notes) with a count, a <b>&#9664; back</b> button, and a <b>+</b> to create a note right inside the folder you&rsquo;re viewing</li>
+              <li>&#128433;&#65039; <b>Right-click any note card</b> (or <b>long-press</b> it on touch) for quick actions &mdash; <b>one-click moves</b> to your folders, pin, star, duplicate, move to trash &mdash; no need to open the note first</li>
+              <li>&#10133; Hover a folder in the sidebar for a <b>+</b> to create a note inside it without navigating there</li>
+              <li>&#128027; Duplicating a note now keeps its folder; the Folders section remembers whether you collapsed it</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.11.1 &mdash; folder fixes</h4>
             <ul>
               <li>&#128027; <b>Fixed</b>: after opening a note, the other notes in the sidebar wouldn&rsquo;t open at all</li>
               <li>&#128193; <b>Folders now behave like real folders</b> &mdash; the notes list shows your <b>unfiled</b> notes; filed notes live inside their folder (open it in the sidebar&rsquo;s Folders section). The <b>All notes</b> row shows everything at once, and search &amp; tags still find notes in every folder</li>
