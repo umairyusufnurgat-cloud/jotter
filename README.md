@@ -22,11 +22,14 @@
 - ✅ **Interactive checkboxes** — tick a task in the preview and the markdown source updates itself
 - ⌘ **Command palette** — `Ctrl`/`⌘` + `K` to fuzzy-jump to any note or run any action from one place
 - 🔗 **Wiki-links** — type `[[` to link notes together with autocomplete; clicking a link opens the note or creates it
+- ☁️ **GitHub sync** — free private cloud: your notes sync through a secret gist on your own GitHub account (Settings → Sync), manually or automatically
 - 🪓 **Split view** — write on the left, see the rendered result on the right (scroll-synced)
+- 📑 **Outline** — jump between headings in long notes
+- 🧘 **Focus mode** — `Ctrl`/`⌘` + `.` for distraction-free writing
 - 🧩 **Templates** — Today's journal, Meeting notes, Reading notes, Project plan, Brain dump
-- 🏷️ **Tags** — organise notes with tag chips and filter the sidebar by tag
+- 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
-- 🔍 **Instant search** across titles, bodies, and tags
+- 🔍 **Instant search** across titles, bodies, and tags — with match highlighting
 - 📅 **Today's journal** — one click creates a dated daily entry with a journal template (and a 🔥 streak counter)
 - 🌗 **Light & dark themes** + six accent colours
 - 💾 **Private by design** — notes are stored in *your browser's* local storage; nothing ever leaves your device
@@ -36,6 +39,16 @@
 - 📱 **Responsive + installable** — works great on phones (with a one-tap new-note button); install it as a PWA and it works offline
 - ⌨️ **Keyboard shortcuts** for everything
 - 🗑️ **Trash** — deleted notes rest for 30 days before being purged
+
+## ☁️ Sync across devices (free, via your GitHub)
+
+Jotter is private by default — notes live in your browser. To carry them to every device:
+
+1. Create a token with the **`gist`** scope only: [github.com/settings/tokens/new?scopes=gist](https://github.com/settings/tokens/new?scopes=gist&description=Jotter%20sync)
+2. In Jotter: sidebar → **⚙ Settings → Sync** → paste the token → **Save**
+3. **Sync now**, or flip on **Auto-sync** and forget about it
+
+Your notes are stored as a **secret gist** on your own account — unlisted, accessible only with your token. Edits merge with newest-wins per note, and deletions propagate via tombstones. (Secret ≠ encrypted: don't sync anything you wouldn't store on GitHub.)
 
 ## 🔗 Link your notes (wiki-links)
 
@@ -79,6 +92,7 @@ python3 -m http.server 8000
 | Shortcut | Action |
 | --- | --- |
 | `Ctrl`/`⌘` + `K` | Command palette (search notes & run actions) |
+| `Ctrl`/`⌘` + `.` | Focus mode (Esc to exit) |
 | `N` | New note (when not typing) |
 | `Ctrl`/`⌘` + `Alt` + `N` | New note (from anywhere) |
 | `/` or `Ctrl`/`⌘` + `F` | Focus search |
@@ -88,7 +102,9 @@ python3 -m http.server 8000
 | `Tab` / `Shift + Tab` | Indent / outdent lines in the editor |
 | `Enter` | Continue lists & checkboxes automatically |
 | `Ctrl`/`⌘` + `S` | Force save |
-| `Esc` | Close menus / palette / sidebar |
+| `Esc` | Close menus / palette / modals / focus mode |
+
+💡 Right-click a tag chip in the sidebar to rename it or delete it from all notes.
 
 ## 📝 Markdown support
 

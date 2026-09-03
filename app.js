@@ -90,7 +90,11 @@
     listIcon: svg('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>', 15),
     fileText: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', 15),
     droplet: svg('<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>', 16),
-    columns: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/>', 15)
+    columns: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/>', 15),
+    sliders: svg('<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', 16),
+    maximize: svg('<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>', 16),
+    cloud: svg('<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>', 14),
+    pencil: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', 14)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -110,6 +114,8 @@
   var NOTES_KEY = 'jotter.notes.v1';
   var SETTINGS_KEY = 'jotter.settings.v1';
   var VER_KEY = 'jotter.ver';
+  var PURGED_KEY = 'jotter.purged.v1';
+  var SYNC_KEY = 'jotter.sync.v1';
 
   /* ---------------- state ---------------- */
   var notes = [];
@@ -118,6 +124,7 @@
   var dirty = false;
   var purgeArm = { id: null, t: null };
   var wikiPop = { open: false, items: [], sel: 0, startIdx: 0, caret: 0 };
+  var purged = []; // tombstones for notes deleted forever (so sync doesn't resurrect them)
 
   /* ---------------- dom refs ---------------- */
   var sidebar = $('#sidebar'), overlay = $('#overlay'), toastEl = $('#toast');
@@ -133,6 +140,13 @@
   var fabNew = $('#fabNew'), dropOverlay = $('#dropOverlay');
   var toastMsg = $('#toastMsg'), toastAct = $('#toastAct');
   var wikiPopEl = $('#wikiPop'), streakBadge = $('#streakBadge');
+  var settingsBtn = $('#settingsBtn'), settingsOverlay = $('#settingsOverlay'), settingsCloseBtn = $('#settingsCloseBtn');
+  var syncTokenInput = $('#syncTokenInput'), syncSaveBtn = $('#syncSaveBtn'), syncStatus = $('#syncStatus');
+  var syncNowBtn = $('#syncNowBtn'), syncAutoChk = $('#syncAutoChk'), syncDisconnectBtn = $('#syncDisconnectBtn'), aboutInfo = $('#aboutInfo');
+  var promptOverlay = $('#promptOverlay'), promptTitle = $('#promptTitle'), promptInput = $('#promptInput');
+  var promptOkBtn = $('#promptOkBtn'), promptCancelBtn = $('#promptCancelBtn'), promptCloseBtn = $('#promptCloseBtn');
+  var ctxMenu = $('#ctxMenu'), outlineBtn = $('#outlineBtn'), outlineMenu = $('#outlineMenu');
+  var zenBtn = $('#zenBtn'), zenExitBtn = $('#zenExitBtn');
   var storageNote = $('#storageNote'), emptyTrashBtn = $('#emptyTrashBtn');
   var emptyState = $('#emptyState'), emptyTitle = $('#emptyTitle'), emptyText = $('#emptyText');
   var emptyNewBtn = $('#emptyNewBtn'), emptyDailyBtn = $('#emptyDailyBtn'), clearFiltersBtn = $('#clearFiltersBtn');
@@ -170,8 +184,53 @@
     };
   }
 
-  function persist() { store.set(NOTES_KEY, JSON.stringify(notes)); }
+  function persist() {
+    store.set(NOTES_KEY, JSON.stringify(notes));
+    if (!syncing) scheduleAutoSync();
+  }
   function persistSettings() { store.set(SETTINGS_KEY, JSON.stringify(settings)); }
+  function persistPurged() { store.set(PURGED_KEY, JSON.stringify(purged)); }
+
+  /* merge incoming notes into local state — newest edit wins per note */
+  function mergeNotes(incoming) {
+    var added = 0, updated = 0, skipped = 0;
+    incoming.forEach(function (raw) {
+      var n = normalizeNote(raw);
+      if (!n) { skipped++; return; }
+      var existing = getNote(n.id);
+      if (!existing) { notes.push(n); added++; }
+      else if (n.updatedAt > existing.updatedAt) {
+        for (var k in n) existing[k] = n[k];
+        updated++;
+      } else skipped++;
+    });
+    return { added: added, updated: updated, skipped: skipped, changed: (added + updated) > 0 };
+  }
+
+  /* tombstones: notes deleted forever, so other devices don't resurrect them */
+  function recordPurge(ids) {
+    var now = Date.now();
+    ids.forEach(function (id) {
+      var x = null;
+      for (var i = 0; i < purged.length; i++) if (purged[i].id === id) { x = purged[i]; break; }
+      if (x) x.at = now; else purged.push({ id: id, at: now });
+    });
+  }
+
+  function applyPurged(remoteList) {
+    var changed = false;
+    (remoteList || []).forEach(function (p) {
+      if (!p || !p.id) return;
+      var local = null;
+      for (var i = 0; i < purged.length; i++) if (purged[i].id === p.id) { local = purged[i]; break; }
+      if (!local) { purged.push({ id: p.id, at: +p.at || Date.now() }); changed = true; }
+      else if ((+p.at || 0) > local.at) { local.at = +p.at; changed = true; }
+      var before = notes.length;
+      notes = notes.filter(function (n) { return n.id !== p.id; });
+      if (notes.length !== before) changed = true;
+    });
+    return changed;
+  }
 
   var WELCOME_BODY = [
     '# Welcome to Jotter \uD83D\uDC4B',
@@ -240,9 +299,16 @@
 
   function purgeOldTrash() {
     var cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    var before = notes.length;
-    notes = notes.filter(function (n) { return !(n.deleted && n.deletedAt && n.deletedAt < cutoff); });
-    if (notes.length !== before) persist();
+    var removed = notes.filter(function (n) { return n.deleted && n.deletedAt && n.deletedAt < cutoff; });
+    if (removed.length) {
+      removed.forEach(function (n) { recordPurge(n.id); });
+      notes = notes.filter(function (n) { return removed.indexOf(n) === -1; });
+      persist(); persistPurged();
+    }
+    var cut2 = Date.now() - 180 * 24 * 60 * 60 * 1000; // prune very old tombstones
+    var before = purged.length;
+    purged = purged.filter(function (p) { return (p.at || 0) > cut2; });
+    if (purged.length !== before) persistPurged();
   }
 
   function load() {
@@ -258,6 +324,8 @@
     if (raw === null && !notes.length) seed();
     var s = store.get(SETTINGS_KEY);
     if (s) { try { var so = JSON.parse(s); for (var k in so) if (k in settings) settings[k] = so[k]; } catch (e) {} }
+    var pr = store.get(PURGED_KEY);
+    if (pr) { try { var pa = JSON.parse(pr); if (Array.isArray(pa)) purged = pa.filter(function (p) { return p && p.id; }); } catch (e) {} }
     purgeOldTrash();
   }
 
@@ -290,6 +358,7 @@
     s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');
     s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
     s = s.replace(/^\s{0,3}#{1,6}\s+/gm, '');
+    s = s.replace(/^\s*>\s?/gm, '');
     s = s.replace(/^\s*&gt;\s?/gm, '');
     s = s.replace(/^(\s*)([-*+]|\d{1,9}[.)])\s+(\[[ xX]\]\s+)?/gm, '$1');
     s = s.replace(/^(-{3,}|\*{3,}|_{3,})\s*$/gm, '');
@@ -338,6 +407,16 @@
     }).join('');
   }
 
+  /* highlight search matches in escaped text */
+  function hi(text) {
+    var esc = escapeHtml(text);
+    var q = ui.search.trim();
+    if (!q) return esc;
+    var qe = escapeHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    try { return esc.replace(new RegExp('(' + qe + ')', 'gi'), '<mark>$1</mark>'); }
+    catch (e) { return esc; }
+  }
+
   function cardHtml(n) {
     var active = n.id === ui.activeId;
     var title = n.title || 'Untitled';
@@ -360,9 +439,9 @@
     }
     return '<div class="note-card' + (active ? ' active' : '') + (ui.trash ? ' trashed' : '') + '" data-id="' + n.id +
       '" role="button" tabindex="0" aria-label="' + escapeHtml(title) + '">' +
-      '<div class="nc-top"><span class="nc-title">' + escapeHtml(title) + '</span>' +
+      '<div class="nc-top"><span class="nc-title">' + hi(title) + '</span>' +
       (icons ? '<span class="nc-icons">' + icons + '</span>' : '') + '</div>' +
-      (snip ? '<div class="nc-snippet">' + escapeHtml(snip) + '</div>' : '') +
+      (snip ? '<div class="nc-snippet">' + hi(snip) + '</div>' : '') +
       '<div class="nc-meta"><span>' + date + '</span>' +
       (tags ? '<span class="nc-tags">' + tags + '</span>' : '') + '</div>' +
       actions + '</div>';
@@ -480,7 +559,11 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    storageNote.textContent = count + ' note' + (count === 1 ? '' : 's') + ' · ' + fmtBytes(size) + ' · saved in this browser';
+    var line = count + ' note' + (count === 1 ? '' : 's') + ' · ' + fmtBytes(size) + ' · saved in this browser';
+    if (sync.lastSync) {
+      line += ' · \u2601\uFE0F ' + new Date(sync.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    storageNote.textContent = line;
   }
 
   /* ---------------- note actions ---------------- */
@@ -569,8 +652,9 @@
   }
 
   function purgeNote(id) {
+    recordPurge([id]);
     notes = notes.filter(function (n) { return n.id !== id; });
-    persist();
+    persist(); persistPurged();
     if (ui.activeId === id) ui.activeId = null;
     renderAll();
     toast('Deleted forever');
@@ -848,6 +932,7 @@
     noteMenuBtn.setAttribute('aria-expanded', String(!noteMenu.hidden));
   });
   document.addEventListener('click', function (e) {
+    if (!(e.target.closest && e.target.closest('#ctxMenu'))) ctxMenu.hidden = true;
     if (!(e.target.closest && e.target.closest('.menu-anchor'))) closeAllMenus();
   });
   duplicateBtn.addEventListener('click', function () { noteMenu.hidden = true; duplicateNote(); });
@@ -1040,21 +1125,12 @@
         var data = JSON.parse(reader.result);
         var incoming = Array.isArray(data) ? data : data.notes;
         if (!Array.isArray(incoming)) throw new Error('bad');
-        var added = 0, updated = 0, skipped = 0;
-        incoming.forEach(function (raw) {
-          var n = normalizeNote(raw);
-          if (!n) { skipped++; return; }
-          var existing = getNote(n.id);
-          if (!existing) { notes.push(n); added++; }
-          else if (n.updatedAt > existing.updatedAt) {
-            for (var k in n) existing[k] = n[k];
-            updated++;
-          } else skipped++;
-        });
-        persist();
+        var m = mergeNotes(incoming);
+        if (data && Array.isArray(data.purged)) applyPurged(data.purged);
+        persist(); persistPurged();
         if (ui.activeId && !getNote(ui.activeId)) ui.activeId = null;
         renderAll();
-        toast('Restored: ' + added + ' added, ' + updated + ' updated' + (skipped ? ', ' + skipped + ' skipped' : ''));
+        toast('Restored: ' + m.added + ' added, ' + m.updated + ' updated' + (m.skipped ? ', ' + m.skipped + ' skipped' : ''));
       } catch (err) {
         toast('\u26A0\uFE0F Could not read that file — is it a Jotter backup?');
       }
@@ -1194,7 +1270,11 @@
     var inField = ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     var k = e.key.toLowerCase();
 
-    if (mod && k === 'k') { e.preventDefault(); togglePalette(); }
+    if (mod && k === 'k') {
+      e.preventDefault();
+      if (settingsOverlay.hidden && promptOverlay.hidden) togglePalette();
+    }
+    else if (mod && e.key === '.') { e.preventDefault(); toggleZen(); }
     else if (mod && e.altKey && k === 'n') { e.preventDefault(); createNote(); }
     else if (mod && k === 'f') { e.preventDefault(); focusSearch(); }
     else if (mod && k === 's') { e.preventDefault(); saveActive(); toast('Saved'); }
@@ -1202,8 +1282,12 @@
     else if (k === '/' && !inField) { e.preventDefault(); focusSearch(); }
     else if (k === 'n' && !inField && !mod && !e.altKey) { createNote(); }
     else if (e.key === 'Escape') {
-      if (!cmdkOverlay.hidden) closePalette();
+      if (!ctxMenu.hidden) ctxMenu.hidden = true;
+      else if (!promptOverlay.hidden) closePrompt();
+      else if (!settingsOverlay.hidden) closeSettings();
+      else if (!cmdkOverlay.hidden) closePalette();
       else if (wikiPop.open) hideWikiPop();
+      else if (document.body.classList.contains('zen')) toggleZen();
       else {
         closeAllMenus();
         closeMobileSidebar();
@@ -1280,7 +1364,8 @@
     [templateMenu, templateBtn],
     [accentMenu, accentBtn],
     [backupMenu, backupBtn],
-    [impMenu, impBtn]
+    [impMenu, impBtn],
+    [outlineMenu, outlineBtn]
   ];
   bindMenu(templateBtn, templateMenu);
   bindMenu(accentBtn, accentMenu);
@@ -1423,7 +1508,11 @@
     A('New from template: Project plan', '', ICONS.listIcon, function () { openTemplate('project'); });
     A('New from template: Brain dump', '', ICONS.zap, function () { openTemplate('braindump'); });
     A('Cycle view (Edit / Split / Preview)', 'Ctrl E', ICONS.columns, function () { cycleView(); });
+    A('Toggle focus mode', 'Ctrl .', ICONS.maximize, toggleZen);
+    A('Show outline (headings)', '', ICONS.listIcon, function () { buildOutline(); closeAllMenus(); outlineMenu.hidden = false; });
     A('Toggle light / dark theme', '', ICONS.moon, function () { themeBtn.click(); });
+    A('Open settings & sync', '', ICONS.sliders, openSettings);
+    if (sync.token) A('Sync notes now', '', ICONS.cloud, function () { syncNow(false); });
     A('Backup notes (JSON)', '', ICONS.download, function () { exportBackup(); });
     A('Export all notes as Markdown', '', ICONS.fileText, function () { exportAllMd(); });
     A('Restore JSON backup', '', ICONS.upload, function () { importFile.click(); });
@@ -1614,12 +1703,333 @@
   /* ---------- mobile FAB ---------- */
   fabNew.addEventListener('click', function () { createNote(); });
 
+  /* ============================================================
+     v1.2 — GitHub gist sync, outline, focus mode, tag tools
+     ============================================================ */
+
+  /* ---------- gist sync ---------- */
+  var sync = { token: '', gistId: '', auto: false, lastSync: 0 };
+  var syncing = false;
+  var scheduleAutoSync = debounce(function () {
+    if (sync.token && sync.auto && !syncing) syncNow(true);
+  }, 5000);
+
+  function loadSync() {
+    var raw = store.get(SYNC_KEY);
+    if (!raw) return;
+    try {
+      var s = JSON.parse(raw);
+      sync.token = s.token || '';
+      sync.gistId = s.gistId || '';
+      sync.auto = !!s.auto;
+      sync.lastSync = +s.lastSync || 0;
+    } catch (e) { /* ignore */ }
+  }
+  function saveSyncCfg() { store.set(SYNC_KEY, JSON.stringify(sync)); }
+
+  function gh(path, opts) {
+    return fetch('https://api.github.com' + path, Object.assign({
+      headers: {
+        'Authorization': 'token ' + sync.token,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      }
+    }, opts || {}));
+  }
+
+  function syncPayload() {
+    return JSON.stringify({
+      app: 'jotter', version: 2,
+      exportedAt: new Date().toISOString(),
+      notes: notes,
+      purged: purged
+    });
+  }
+
+  async function syncNow(silent) {
+    if (syncing) return;
+    if (!sync.token) {
+      if (!silent) { openSettings(); toast('Add a GitHub token to enable sync'); }
+      return;
+    }
+    syncing = true;
+    updateSyncStatus('Syncing…');
+    if (dirty) saveActive(); // let unsaved edits participate in the merge
+    try {
+      // 1. pull + merge
+      var remote = null;
+      if (sync.gistId) {
+        var res = await gh('/gists/' + sync.gistId);
+        if (res.status === 404) sync.gistId = '';
+        else if (res.status === 401) throw new Error('token rejected (401)');
+        else if (!res.ok) throw new Error('GitHub ' + res.status);
+        else {
+          var g = await res.json();
+          var f = g.files && g.files['jotter-notes.json'];
+          if (f) {
+            var content = f.content || '';
+            if (f.truncated && f.raw_url) {
+              var r2 = await fetch(f.raw_url);
+              content = await r2.text();
+            }
+            if (content) remote = JSON.parse(content);
+          }
+        }
+      }
+      var changed = false;
+      if (remote && Array.isArray(remote.notes)) changed = mergeNotes(remote.notes).changed;
+      if (remote && Array.isArray(remote.purged)) changed = applyPurged(remote.purged) || changed;
+
+      var activeNote = getNote(ui.activeId);
+      var activeStamp = activeNote ? activeNote.updatedAt : 0;
+
+      if (changed) { persist(); persistPurged(); }
+
+      // 2. push merged state
+      var body = JSON.stringify({
+        description: 'Jotter notes sync (auto-generated — do not edit)',
+        files: { 'jotter-notes.json': { content: syncPayload() } }
+      });
+      if (sync.gistId) {
+        var pr = await gh('/gists/' + sync.gistId, { method: 'PATCH', body: body });
+        if (pr.status === 404) sync.gistId = '';
+        else if (pr.status === 401) throw new Error('token rejected (401)');
+        else if (!pr.ok) throw new Error('GitHub ' + pr.status);
+      }
+      if (!sync.gistId) {
+        var cr = await gh('/gists', { method: 'POST', body: body });
+        if (cr.status === 401) throw new Error('token rejected (401)');
+        if (!cr.ok) throw new Error('GitHub ' + cr.status);
+        var cg = await cr.json();
+        sync.gistId = cg.id;
+      }
+      sync.lastSync = Date.now();
+      saveSyncCfg();
+      updateSyncStatus();
+
+      // only re-render the editor if the open note actually changed remotely
+      var an = getNote(ui.activeId);
+      if (!an || an.updatedAt !== activeStamp) renderAll();
+      else { renderSidebar(); updateStorageNote(); }
+
+      if (!silent) toast('\u2601\uFE0F Synced with GitHub');
+    } catch (err) {
+      updateSyncStatus('\u26A0\uFE0F ' + err.message);
+      if (!silent) toast('\u26A0\uFE0F Sync failed — ' + err.message);
+    } finally {
+      syncing = false;
+    }
+  }
+
+  /* ---------- settings modal ---------- */
+  function openSettings() {
+    syncTokenInput.value = sync.token || '';
+    syncAutoChk.checked = !!sync.auto;
+    updateSyncStatus();
+    var count = notes.filter(function (n) { return !n.deleted; }).length;
+    var size = 0;
+    try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
+    aboutInfo.textContent = 'Jotter v1.2 · ' + count + ' note' + (count === 1 ? '' : 's') +
+      ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
+    settingsOverlay.hidden = false;
+    setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
+  }
+  function closeSettings() { settingsOverlay.hidden = true; }
+  settingsBtn.addEventListener('click', openSettings);
+  settingsCloseBtn.addEventListener('click', closeSettings);
+  settingsOverlay.addEventListener('click', function (e) { if (e.target === settingsOverlay) closeSettings(); });
+
+  function updateSyncStatus(msg) {
+    if (msg) { syncStatus.textContent = msg; return; }
+    if (!sync.token) { syncStatus.textContent = 'Not configured.'; return; }
+    var last = sync.lastSync
+      ? new Date(sync.lastSync).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
+      : 'never';
+    syncStatus.innerHTML = sync.gistId
+      ? '\u2713 Secret gist <a href="https://gist.github.com/' + escapeHtml(sync.gistId) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(sync.gistId.slice(0, 8)) + '\u2026</a> · last sync: ' + last
+      : 'Ready — the first sync will create a secret gist. Last sync: ' + last;
+  }
+
+  syncSaveBtn.addEventListener('click', async function () {
+    var t = syncTokenInput.value.trim();
+    sync.token = t;
+    if (!t) {
+      saveSyncCfg(); updateSyncStatus();
+      toast('Sync token cleared');
+      return;
+    }
+    updateSyncStatus('Checking token…');
+    try {
+      var r = await gh('/gists?per_page=1');
+      if (r.status === 401) {
+        updateSyncStatus('\u26A0\uFE0F Token rejected (401) — make sure it has the gist scope.');
+        toast('\u26A0\uFE0F GitHub rejected that token');
+        return;
+      }
+      if (!r.ok) throw new Error('GitHub ' + r.status);
+      saveSyncCfg(); updateSyncStatus();
+      toast('\u2713 Sync token saved');
+    } catch (e) {
+      updateSyncStatus('\u26A0\uFE0F ' + e.message);
+    }
+  });
+
+  syncNowBtn.addEventListener('click', function () { syncNow(false); });
+  syncAutoChk.addEventListener('change', function () {
+    sync.auto = syncAutoChk.checked;
+    saveSyncCfg();
+    if (sync.auto && !sync.token) toast('Add a token first to enable auto-sync');
+    else toast(sync.auto ? 'Auto-sync on — notes sync a few seconds after each change' : 'Auto-sync off');
+  });
+  withConfirm(syncDisconnectBtn, 'Really disconnect?', function () {
+    sync = { token: '', gistId: '', auto: false, lastSync: 0 };
+    saveSyncCfg();
+    updateSyncStatus();
+    updateStorageNote();
+    toast('Sync disconnected — your notes stay in this browser');
+  });
+
+  /* ---------- prompt modal (generic input dialog) ---------- */
+  var promptCb = null;
+  function openPromptModal(title, value, okLabel, cb) {
+    promptTitle.textContent = title;
+    promptInput.value = value || '';
+    promptOkBtn.textContent = okLabel || 'OK';
+    promptCb = cb;
+    promptOverlay.hidden = false;
+    setTimeout(function () { promptInput.focus(); promptInput.select(); }, 0);
+  }
+  function closePrompt() { promptOverlay.hidden = true; promptCb = null; }
+  function submitPrompt() {
+    var v = promptInput.value;
+    var cb = promptCb;
+    closePrompt();
+    if (cb) cb(v);
+  }
+  promptOkBtn.addEventListener('click', submitPrompt);
+  promptCancelBtn.addEventListener('click', closePrompt);
+  promptCloseBtn.addEventListener('click', closePrompt);
+  promptOverlay.addEventListener('click', function (e) { if (e.target === promptOverlay) closePrompt(); });
+  promptInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitPrompt(); }
+  });
+
+  /* ---------- outline (headings) ---------- */
+  function buildOutline() {
+    renderPreview(); // ensure fresh content
+    var hs = $$('h1,h2,h3,h4,h5,h6', previewArea);
+    if (!hs.length) {
+      outlineMenu.innerHTML = '<div class="ol-empty">No headings yet — add some with # in the editor.</div>';
+      return;
+    }
+    var html = hs.map(function (h, i) {
+      var lvl = parseInt(h.tagName.slice(1), 10);
+      return '<button class="ol-item lvl-' + lvl + '" data-h="' + i + '" style="padding-left:' + (10 + (lvl - 1) * 13) + 'px">' +
+        escapeHtml(h.textContent || ('H' + lvl)) + '</button>';
+    }).join('');
+    outlineMenu.innerHTML = html;
+  }
+  outlineBtn.addEventListener('click', function () {
+    var open = outlineMenu.hidden;
+    closeAllMenus();
+    if (!open) { buildOutline(); outlineMenu.hidden = false; }
+    outlineBtn.setAttribute('aria-expanded', String(!outlineMenu.hidden));
+  });
+  outlineMenu.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-h]') : null;
+    if (!b) return;
+    var i = +b.getAttribute('data-h');
+    closeAllMenus();
+    if (settings.view === 'edit') setView('split');
+    renderPreview();
+    var hs = $$('h1,h2,h3,h4,h5,h6', previewArea);
+    if (hs[i] && hs[i].scrollIntoView) hs[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  /* ---------- zen / focus mode ---------- */
+  function toggleZen() {
+    document.body.classList.toggle('zen');
+    if (!document.body.classList.contains('zen')) return;
+    if (!getNote(ui.activeId)) createNote();
+    else editorArea.focus();
+  }
+  zenBtn.addEventListener('click', toggleZen);
+  zenExitBtn.addEventListener('click', toggleZen);
+
+  /* ---------- tag tools (rename / delete everywhere) ---------- */
+  var ctxTarget = null;
+  var ctxArmed = false;
+  function showCtx(tag, x, y) {
+    ctxTarget = tag;
+    ctxArmed = false;
+    ctxMenu.innerHTML =
+      '<button id="ctxRename">' + ICONS.pencil + '<span>Rename \u201C' + escapeHtml(tag) + '\u201D\u2026</span></button>' +
+      '<button id="ctxDelete" class="danger">' + ICONS.trashS + '<span>Delete tag from all notes</span></button>';
+    ctxMenu.style.left = Math.max(8, Math.min(x, window.innerWidth - 240)) + 'px';
+    ctxMenu.style.top = Math.max(8, Math.min(y, window.innerHeight - 130)) + 'px';
+    ctxMenu.hidden = false;
+  }
+  tagFilters.addEventListener('contextmenu', function (e) {
+    var chip = e.target.closest ? e.target.closest('[data-tag]') : null;
+    if (!chip) return;
+    e.preventDefault();
+    showCtx(chip.getAttribute('data-tag'), e.clientX, e.clientY);
+  });
+  ctxMenu.addEventListener('click', function (e) {
+    var r = e.target.closest ? e.target.closest('#ctxRename') : null;
+    if (r) {
+      ctxMenu.hidden = true;
+      var tag = ctxTarget;
+      openPromptModal('Rename tag', tag, 'Rename', function (v) { renameTag(tag, v); });
+      return;
+    }
+    var d = e.target.closest ? e.target.closest('#ctxDelete') : null;
+    if (d) {
+      if (ctxArmed) { ctxMenu.hidden = true; deleteTagEverywhere(ctxTarget); return; }
+      ctxArmed = true;
+      d.classList.add('armed');
+      d.innerHTML = '<span>Really delete \u201C' + escapeHtml(ctxTarget) + '\u201D everywhere?</span>';
+      setTimeout(function () { ctxMenu.hidden = true; }, 2600);
+    }
+  });
+
+  function renameTag(oldT, newT) {
+    newT = String(newT || '').replace(/#/g, '').replace(/,/g, '').trim().slice(0, 24);
+    if (!newT || newT.toLowerCase() === (oldT || '').toLowerCase()) return;
+    var count = 0;
+    notes.forEach(function (n) {
+      var i = n.tags.indexOf(oldT);
+      if (i === -1) return;
+      n.tags.splice(i, 1);
+      if (!n.tags.some(function (t) { return t.toLowerCase() === newT.toLowerCase(); })) n.tags.push(newT);
+      n.updatedAt = Date.now();
+      count++;
+    });
+    if (count) {
+      if (ui.tag === oldT) ui.tag = newT;
+      persist(); renderAll();
+      toast('Renamed tag on ' + count + ' note' + (count === 1 ? '' : 's'));
+    }
+  }
+
+  function deleteTagEverywhere(t) {
+    var count = 0;
+    notes.forEach(function (n) {
+      var i = n.tags.indexOf(t);
+      if (i !== -1) { n.tags.splice(i, 1); n.updatedAt = Date.now(); count++; }
+    });
+    if (ui.tag === t) ui.tag = null;
+    persist(); renderAll();
+    toast('Removed tag from ' + count + ' note' + (count === 1 ? '' : 's'));
+  }
+
   /* ---------------- boot ---------------- */
   function init() {
     $$('[data-icon]').forEach(function (el) {
       var ic = ICONS[el.getAttribute('data-icon')];
       if (ic) el.insertAdjacentHTML('afterbegin', ic);
     });
+    loadSync();
     load();
     applyTheme();
     updateAccentMenu();
@@ -1630,12 +2040,13 @@
       ui.activeId = first ? first.id : null;
     }
     renderAll();
+    if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '2') {
-      store.set(VER_KEY, '2');
+    if (ver !== '3') {
+      store.set(VER_KEY, '3');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.1 — press Ctrl K to try the command palette', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.2 — focus mode, outline, GitHub sync & tag tools', { timeout: 6500 });
         }, 700);
       }
     }

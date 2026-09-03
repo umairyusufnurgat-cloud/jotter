@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.2 — sync & focus
+
+- ☁️ **GitHub Gist sync** — free private cloud for your notes, stored as a secret gist on your *own* GitHub account. Paste a gist-scope token in Settings, then sync manually or enable auto-sync. Notes merge with newest-edit-wins, and "delete forever" travels between devices via tombstones
+- 📑 **Outline** — new toolbar button lists every heading in the note; click one to jump straight to it
+- 🧘 **Focus mode** — `Ctrl`/`⌘` + `.` hides everything but your words. `Esc` brings the app back
+- 🏷️ **Tag tools** — right-click any tag chip in the sidebar to rename it or remove it from all notes (with confirm)
+- 🔍 **Search highlighting** — matches are marked in the notes list as you type
+- 📱 **Real PNG icons** (192/512) — proper install prompts on Android/iOS
+- 🩹 Misc: snippets no longer leak `>` quote markers; palette gained settings / outline / focus / sync actions
+
 ## v1.1 — the power update
 
 - ⌘ **Command palette** — press `Ctrl`/`⌘` + `K` to fuzzy-search every note or run any action (new note, templates, theme, backup, import, empty trash, switch view…) from one place
