@@ -47,6 +47,7 @@
           </button>
           <button class="btn primary" id="templateBtn" data-icon="chevDown" aria-label="New from template" aria-haspopup="true" aria-expanded="false"></button>
           <div class="menu" id="templateMenu" hidden>
+            <button data-tpl="playground" data-icon="play"><span>Markdown playground</span></button>
             <button data-tpl="journal" data-icon="calendar"><span>Today&rsquo;s journal</span></button>
             <button data-tpl="meeting" data-icon="users"><span>Meeting notes</span></button>
             <button data-tpl="reading" data-icon="bookOpen"><span>Reading notes</span></button>
@@ -205,7 +206,7 @@
     <div class="drop-card">
       <span data-icon="upload"></span>
       <p>Drop to import</p>
-      <span>.md files become notes · .json restores a backup</span>
+      <span>.md &rarr; notes &nbsp;&middot;&nbsp; .json &rarr; backup &nbsp;&middot;&nbsp; images &rarr; embedded in the current note</span>
     </div>
   </div>
 
@@ -267,7 +268,7 @@
         <!-- ============ TAB 1: GETTING STARTED ============ -->
         <div class="help-pane active" data-pane="guide">
           <div class="gs-step"><span class="gs-num">1</span><div><b>Create your first note</b><br />Click <b>New note</b> (or press <kbd>N</kbd>). Give it a title, then write below &mdash; everything saves automatically as you type.</div></div>
-          <div class="gs-step"><span class="gs-num">2</span><div><b>Write in Markdown</b><br /><code>**bold**</code> <code>*italic*</code> <code># Heading</code> <code>- list</code> <code>- [ ] task</code> <code>[link](url)</code>. Switch to <b>Split</b> view (<kbd>Ctrl</kbd>+<kbd>E</kbd>) to see it rendered live while you type.</div></div>
+          <div class="gs-step"><span class="gs-num">2</span><div><b>Write in Markdown</b><br /><code>**bold**</code> <code>*italic*</code> <code># Heading</code> <code>- list</code> <code>- [ ] task</code> <code>[link](url)</code>. Switch to <b>Split</b> view (<kbd>Ctrl</kbd>+<kbd>E</kbd>) to see it rendered live &mdash; and open <b>New note &#9662; &rarr; Markdown playground</b> for a live tour of every feature.</div></div>
           <div class="gs-step"><span class="gs-num">3</span><div><b>Organise</b><br />Add <b>tags</b> above the editor (type a name + <kbd>&#8629;</kbd>), then filter by them in the sidebar. <b>Pin</b> &#128204; or <b>star</b> &#11088; important notes. Search everything with <kbd>/</kbd>.</div></div>
           <div class="gs-step"><span class="gs-num">4</span><div><b>Link notes together</b><br />Type <code>[[</code> and pick a note to insert a link to it. A <em>dashed</em> link creates the note when clicked &mdash; build your own wiki.</div></div>
           <div class="gs-step"><span class="gs-num">5</span><div><b>Keep a journal</b><br /><b>Today&rsquo;s journal</b> creates a dated entry with a template. Write daily and watch the &#128293; streak grow on the button.</div></div>
@@ -309,6 +310,8 @@
           <h4>In the editor</h4>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tags</b> &mdash; type a name and press <kbd>&#8629;</kbd>; click &times; on a chip to remove it</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="check"></span><div class="bg-txt"><b>Checkboxes</b> &mdash; tick tasks in the preview and the markdown updates itself</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="image"></span><div class="bg-txt"><b>Paste image</b> &mdash; <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes screenshots straight into the note (auto-resized, stored locally); you can also drag image files in</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="clock"></span><div class="bg-txt"><b>Timestamp</b> &mdash; <kbd>Ctrl</kbd>+<kbd>;</kbd> inserts the current date &amp; time (great for journals and logs)</div></div>
           <div class="bg-row"><span class="bg-ico bg-mono">[[ ]]</span><div class="bg-txt"><b>Wiki-links</b> &mdash; type <code>[[</code> for autocomplete; click a link to open (or create) that note</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="plusL"></span><div class="bg-txt"><b>Floating +</b> &mdash; on mobile, quick new note from anywhere</div></div>
         </div>
@@ -316,7 +319,16 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.3 <span class="pill">current</span></h4>
+            <h4>v1.4 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#127918; <b>Markdown playground</b> template &mdash; New note &#9662; &rarr; a live, editable example of every feature (formatting, tasks, tables, wiki-links, images, timestamps&hellip;)</li>
+              <li>&#128444; <b>Paste screenshots</b> into notes with <kbd>Ctrl</kbd>+<kbd>V</kbd> (auto-resized, stored locally), or drag image files in</li>
+              <li>&#9201; <kbd>Ctrl</kbd>+<kbd>;</kbd> inserts a timestamp</li>
+              <li>&#128737; Storage-full warning so a huge paste can never silently eat your notes</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.3 &mdash; help center &amp; fixes</h4>
             <ul>
               <li>&#129658; Fixed the accent-colour menu (it was opening off-screen) and the Outline button</li>
               <li>&#128214; Built-in Help &amp; guide &mdash; press <kbd>?</kbd> any time</li>

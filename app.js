@@ -96,20 +96,32 @@
     cloud: svg('<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>', 14),
     pencil: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', 14),
     help: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>', 16),
-    check: svg('<polyline points="20 6 9 17 4 12"/>', 16)
+    check: svg('<polyline points="20 6 9 17 4 12"/>', 16),
+    play: svg('<polygon points="5 3 19 12 5 21 5 3"/>', 15),
+    image: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>', 16),
+    clock: svg('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', 16)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
   var MEM = {};
   var persistent = true;
+  var storeQuota = false; // set when a write fails because storage is full
   var store = {
     get: function (key) {
       try { return window.localStorage.getItem(key); }
       catch (e) { persistent = false; return Object.prototype.hasOwnProperty.call(MEM, key) ? MEM[key] : null; }
     },
     set: function (key, val) {
-      try { window.localStorage.setItem(key, val); }
-      catch (e) { persistent = false; MEM[key] = val; }
+      try { window.localStorage.setItem(key, val); storeQuota = false; return true; }
+      catch (e) {
+        if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+          storeQuota = true; // storage full — data kept in memory for this session
+        } else {
+          persistent = false;
+          MEM[key] = val;
+        }
+        return false;
+      }
     }
   };
 
@@ -187,8 +199,15 @@
     };
   }
 
+  var quotaWarned = false;
   function persist() {
-    store.set(NOTES_KEY, JSON.stringify(notes));
+    var ok = store.set(NOTES_KEY, JSON.stringify(notes));
+    if (ok) {
+      quotaWarned = false;
+    } else if (storeQuota && !quotaWarned) {
+      quotaWarned = true;
+      toast('\u26A0\uFE0F Browser storage is full \u2014 the latest change could not be saved. Remove a large image or some notes, and consider taking a Backup.', { timeout: 6500 });
+    }
     if (!syncing) scheduleAutoSync();
   }
   function persistSettings() { store.set(SETTINGS_KEY, JSON.stringify(settings)); }
@@ -243,6 +262,7 @@
     '## \u2705 Try me',
     '',
     '- [x] Click this checkbox in **Preview** or **Split** view \u2014 it updates the markdown source too',
+    '- Open **New note \u25BE \u2192 Markdown playground** for a live tour of every feature',
     '- [ ] Write your first thought below',
     '- Press **Ctrl E** to cycle Edit \u2192 Split \u2192 Preview',
     '',
@@ -803,6 +823,7 @@
     else if (e.key === 'Enter' && !e.shiftKey && !mod) { handleEnter(e); }
     else if (mod && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); wrapSelection('**', 'bold text'); }
     else if (mod && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); wrapSelection('*', 'italic text'); }
+    else if (mod && e.key === ';') { e.preventDefault(); insertTimestamp(); }
   });
 
   function handleTab(e) {
@@ -866,6 +887,76 @@
     el.focus();
     markDirty();
   }
+
+  /* insert text at the caret */
+  function insertAtCursor(text) {
+    var el = editorArea;
+    var s = el.selectionStart, e = el.selectionEnd;
+    el.value = el.value.slice(0, s) + text + el.value.slice(e);
+    el.setSelectionRange(s + text.length, s + text.length);
+    el.focus();
+    markDirty();
+  }
+
+  /* Ctrl+; — timestamp for journals & logs */
+  function insertTimestamp() {
+    var d = new Date();
+    insertAtCursor('**' + d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) +
+      ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '** \u2014 ');
+  }
+
+  /* ---------- embedded images (paste / drop) ---------- */
+  function downscaleImage(dataUrl, cb) {
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var maxW = 1200;
+        if (!img.width || img.width <= maxW) { cb(null); return; }
+        var scale = maxW / img.width;
+        var canvas = document.createElement('canvas');
+        canvas.width = maxW;
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        var type = dataUrl.indexOf('data:image/png') === 0 ? 'image/png' : 'image/jpeg';
+        cb(canvas.toDataURL(type, 0.85));
+      } catch (e) { cb(null); }
+    };
+    img.onerror = function () { cb(null); };
+    img.src = dataUrl;
+  }
+
+  function embedImageFile(file) {
+    if (!file || !/^image\//.test(file.type || '')) { toast('\u26A0\uFE0F That file is not an image'); return; }
+    if (file.size > 8 * 1024 * 1024) { toast('\u26A0\uFE0F Image too large (over 8 MB)'); return; }
+    var n = getNote(ui.activeId);
+    if (!n || n.deleted) { toast('Open a note first, then paste or drop the image'); return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var src = String(reader.result || '');
+      downscaleImage(src, function (small) {
+        var uri = small || src;
+        if (uri.length > 2500000) { toast('\u26A0\uFE0F Image too large to embed \u2014 try a smaller one'); return; }
+        var label = 'pasted ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        insertAtCursor('\n![' + label + '](' + uri + ')\n');
+        toast('\uD83D\uDDBC Image embedded' + (small ? ' (auto-resized)' : ''));
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  editorArea.addEventListener('paste', function (e) {
+    var n = getNote(ui.activeId);
+    if (!n || n.deleted) return;
+    var items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file' && /^image\//.test(items[i].type || '')) {
+        var f = items[i].getAsFile();
+        if (f) { e.preventDefault(); embedImageFile(f); }
+        return;
+      }
+    }
+  });
 
   /* tags editor */
   chips.addEventListener('click', function (e) {
@@ -1212,6 +1303,8 @@
     dragDepth = 0;
     dropOverlay.hidden = true;
     var files = Array.prototype.slice.call(e.dataTransfer.files);
+    var imgs = files.filter(function (f) { return /^image\//.test(f.type || ''); });
+    if (imgs.length) { imgs.forEach(embedImageFile); return; }
     var json = files.filter(function (f) { return /\.json$/i.test(f.name); })[0];
     var md = files.filter(function (f) { return /\.(md|markdown|txt)$/i.test(f.name); });
     if (json) importJsonFile(json);
@@ -1450,6 +1543,104 @@
     return new Date().toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
   }
   var TEMPLATES = {
+    playground: function () {
+      return {
+        title: 'Markdown playground', tags: ['guide'],
+        body: [
+          '# \uD83C\uDF93 Markdown playground',
+          '',
+          '> This note demonstrates **everything** the notebook can do \u2014 and it\u2019s a completely normal note, so click around, edit, break things. It autosaves, and you can trash it any time.',
+          '',
+          '---',
+          '',
+          '## \uD83D\uDCDD Text formatting',
+          '',
+          '**bold** \u00B7 *italic* \u00B7 ***bold italic*** \u00B7 ~~strikethrough~~ \u00B7 `inline code` \u00B7 [a link](https://example.com) \u00B7 a bare link: https://example.com',
+          '',
+          'Backslash escapes show characters literally: \\*not italic\\* \u00B7 \\[\\[not a wiki link\\]\\]',
+          '',
+          '## \uD83D\uDCD1 Headings & structure',
+          '',
+          '# Heading 1',
+          '## Heading 2',
+          '### Heading 3',
+          '#### Heading 4 \u2014 rarely needed',
+          '',
+          'Tip: use the **Outline** button in the toolbar to jump between headings in long notes.',
+          '',
+          '## \u2705 Task lists \u2014 click these in Preview or Split view',
+          '',
+          '- [x] Checkboxes are clickable in the rendered preview',
+          '- [ ] Click me \u2014 the markdown source updates itself',
+          '  - [ ] Tasks can be nested',
+          '',
+          '## \uD83D\uDCCB Lists',
+          '',
+          '1. Ordered lists',
+          '2. With nesting',
+          '   - A nested bullet',
+          '     - Even deeper',
+          '3. And back again',
+          '',
+          '- Bullets work too, with **formatting** inside',
+          '',
+          '## \uD83D\uDCAC Quotes',
+          '',
+          '> Multi-line blockquotes',
+          '> look like this.',
+          '> \u2014 Someone wise',
+          '',
+          '## \uD83D\uDCBB Code',
+          '',
+          'Inline code: `const x = 42`, plus fenced blocks with a language label:',
+          '',
+          '```js',
+          '// Fenced code block with a language label',
+          'function greet(name) {',
+          '  return `Hello, ${name}!`;',
+          '}',
+          "greet('Jotter');",
+          '```',
+          '',
+          '## \uD83D\uDCCA Tables (with alignment)',
+          '',
+          '| Feature | Supported | Notes |',
+          '| --- | :---: | --- |',
+          '| Tables | \u2705 | this column is centred |',
+          '| Tasks | \u2705 | clickable |',
+          '| Wiki-links | \u2705 | [[Ideas]] \u2190 dashed = not created yet |',
+          '',
+          '## \uD83D\uDD17 Wiki-links \u2014 connect your notes',
+          '',
+          'Link to any note by name, e.g. [[Welcome to Jotter]]. A **dashed** link like [[Ideas]] creates that note when clicked. Type `[[` in the editor for autocomplete.',
+          '',
+          '## \uD83D\uDDBC Images',
+          '',
+          'Images embed directly in your notes \u2014 here\u2019s one now:',
+          '',
+          '![Jotter icon](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAADeklEQVR4nO3bMU4cQRCG0cbyFQgQuSM4inM4ABwKDgC5jwKRc0TAIXCEvAJkvMvMVjX/e6ml3XZXf9MrjRgDAAAAAAAAAAAAAAAAgDkcVC9gaRdnd8//+vfHp4dVvvfo8HiVz+3o+vb0y5ybL/Ef+ejQbxLAsmaPYdrFb3PoNwlgPTPGMN2Cdz34LwSwvplC+Fa9gG189vCzHzPNaYpSl9xQN8B+db8N2t8AMz1NeKv7/FoH0H3z+D+d59g2gM6bxva6zrNlAF03i8/pONd2AXTcJJbTbb6tAui2Oayj05xbBQD71iaATk8F1tdl3i0C6LIZ7FeHubcIAKqUB9DhKUCd6vmXBwCVBEC00gCqrz96qDwHbgCiCYBoZQH4+cOmqvPgBiCaAIgmAKIJgGgCIJoAiCYAogmAaAIgmgCIJgCiCYBo36sXwF9XNyfVS9jJ5fl99RJ25gYgmgCIJgCiCYBoAiCaAIgmAKIJgGgCIJo3wY3M/EZ1Vm4AogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAogmAaAIgmgCIJgCiCYBoAiCavwlu5Orm5Hf1GnZxeX7/o3oNu3IDEE0ARBMA0QRANAEQTQBEEwDRBEA0ARDNm+BGZn6jOis3ANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQzd8EN3J1c/Kr6rsvz+9/Vn13JTcA0QRANAEQTQBEEwDRBEA0ARBNAEQTANG8CW4k9W1sJTcA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRygK4vj09qPpu+qk6D24AogmAaKUB+BnEGLXnwA1ANAEQrTwAP4OyVc+/PACo1CKA6qcANTrMvUUAY/TYDPany7zbBAAVWgXQ5anAujrNuVUAY/TaHJbXbb7tAhij3yaxjI5zbRnAGD03i911nWfbAMbou2lsp/McWwcwRu/N42Pd59d6ca9dnN09f/YzHp8elljKG0eHx6t87qy6H/wX7W+ATbNsarqZ5jTNQl/b9TZwA6xnpoP/YroFv2ebGASwrBkP/aapF/+ej2IQwOfNfugBAAAAAAAAAAAAAABgWn8AymuwahjX5FQAAAAASUVORK5CYII=)',
+          '',
+          '**Paste a screenshot** into the editor (Ctrl+V) or **drag an image file** in \u2014 it\u2019s resized and embedded automatically, and never leaves your browser.',
+          '',
+          '## \u23F0 Timestamps',
+          '',
+          'Press **Ctrl+;** in the editor to drop in the current date & time \u2014 perfect for journals and logs:',
+          '',
+          '> **3 Sep 2026, 14:02** \u2014 timestamps look like this',
+          '',
+          '---',
+          '',
+          '## \uD83C\uDFAF Your turn',
+          '',
+          '- [ ] Write something below',
+          '- [ ] Add a tag with the chips above the editor',
+          '- [ ] Star \u2B50 or pin \uD83D\uDCCC this note',
+          '- [ ] Find it again later with **Ctrl K**',
+          '',
+          'That\u2019s the whole toolbox \u2014 everything else is just words. \u2728'
+        ].join('\n')
+      };
+    },
     meeting: function () {
       return {
         title: 'Meeting — ' + dShort(), tags: ['meeting'],
@@ -1507,6 +1698,7 @@
       acts.push({ type: 'action', label: label, sub: sub, icon: icon, run: run });
     }
     A('New note', 'Ctrl Alt N', ICONS.filePlus, function () { createNote(); });
+    A('New: Markdown playground (all examples)', '', ICONS.play, function () { openTemplate('playground'); });
     A('Today\u2019s journal', '', ICONS.calendar, function () { openDaily(); });
     A('New from template: Meeting notes', '', ICONS.users, function () { openTemplate('meeting'); });
     A('New from template: Reading notes', '', ICONS.bookOpen, function () { openTemplate('reading'); });
@@ -1835,7 +2027,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.3 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.4 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2063,11 +2255,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '4') {
-      store.set(VER_KEY, '4');
+    if (ver !== '5') {
+      store.set(VER_KEY, '5');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.3 — fixed the accent & outline buttons; press ? for the new built-in guide', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.4 \u2014 image paste, timestamps & a Markdown playground template (New note \u25BE)', { timeout: 6500 });
         }, 700);
       }
     }

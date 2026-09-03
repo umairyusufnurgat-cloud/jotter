@@ -15,8 +15,9 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ESC_MAP[c]; });
   }
 
-  function safeUrl(url) {
+  function safeUrl(url, isImage) {
     var u = String(url == null ? '' : url).trim();
+    if (isImage && /^data:image\//i.test(u)) return u; // embedded images (safe in <img>)
     if (/^(https?:|mailto:|tel:)/i.test(u)) return u;
     if (/^(\.\.?=?)?[\/#.]/.test(u)) return u; // relative paths, anchors
     return '#';
@@ -53,7 +54,7 @@
     // 3. images  ![alt](url)
     text = text.replace(/!\[([^\]]*)\]\(\s*(\S+)(?:\s+["'](.*?)["'])?\s*\)/g, function (m, alt, url, title) {
       var t = title ? ' title="' + escapeHtml(title) + '"' : '';
-      return keep('<img src="' + escapeHtml(safeUrl(url)) + '" alt="' + escapeHtml(alt) + '"' + t + ' loading="lazy">');
+      return keep('<img src="' + escapeHtml(safeUrl(url, true)) + '" alt="' + escapeHtml(alt) + '"' + t + ' loading="lazy">');
     });
 
     // 4. links  [text](url)

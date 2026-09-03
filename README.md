@@ -26,7 +26,9 @@
 - 🪓 **Split view** — write on the left, see the rendered result on the right (scroll-synced)
 - 📑 **Outline** — jump between headings in long notes
 - 🧘 **Focus mode** — `Ctrl`/`⌘` + `.` for distraction-free writing
-- 🧩 **Templates** — Today's journal, Meeting notes, Reading notes, Project plan, Brain dump
+- 🧩 **Templates** — Markdown playground (a live tour of every feature), Today's journal, Meeting notes, Reading notes, Project plan, Brain dump
+- 🖼 **Images in notes** — paste screenshots with `Ctrl`/`⌘`+`V` or drag image files in; they're auto-resized and stored locally
+- ⏱ **Timestamps** — `Ctrl`/`⌘`+`;` drops in the current date & time
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags — with match highlighting
@@ -100,6 +102,8 @@ python3 -m http.server 8000
 | `/` or `Ctrl`/`⌘` + `F` | Focus search |
 | `Ctrl`/`⌘` + `E` | Cycle view: Edit → Split → Preview |
 | `Ctrl`/`⌘` + `B` / `I` | Bold / italic (wraps selection) |
+| `Ctrl`/`⌘` + `;` | Insert timestamp |
+| `Ctrl`/`⌘` + `V` | Paste an image from the clipboard into the note |
 | `[[` | Insert a wiki-link (autocomplete popup) |
 | `Tab` / `Shift + Tab` | Indent / outdent lines in the editor |
 | `Enter` | Continue lists & checkboxes automatically |

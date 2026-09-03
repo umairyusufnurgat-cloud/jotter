@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4 — playground & images
+
+- 🎓 **Markdown playground template** — *New note ▾ → Markdown playground* creates a live, editable note demonstrating every single feature: text formatting, escapes, headings, clickable task lists, nested lists, quotes, code blocks, tables with alignment, wiki-links (real and dashed), embedded images, and timestamps — plus a checklist of things to try
+- 🖼 **Paste screenshots into notes** — `Ctrl`/`⌘` + `V` embeds clipboard images (auto-resized to max 1200px, stored locally in the note, never uploaded); drag & drop image files works too
+- ⏱ `Ctrl`/`⌘` + `;` inserts a timestamp (date + time) — great for journals and logs
+- 🛡 Storage-quota detection — if the browser ever runs out of space, you get a clear warning instead of a silent failure
+- 🔒 Markdown renderer now allows `data:image/…` URLs for images only (links stay strictly sanitised)
+- 🩹 Help center updated: new buttons-guide rows, v1.4 in What's new; SW bumped to v5
+
 ## v1.3 — help center & fixes
 
 - 🩹 Fixed the accent-colour menu (it opened off-screen, so clicking the droplet appeared to do nothing)
