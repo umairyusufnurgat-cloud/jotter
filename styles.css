@@ -1250,3 +1250,56 @@ body.side-anim .sidebar { transition: width .18s ease, min-width .18s ease; }
 }
 .hist-md { padding: 14px 18px 18px; max-height: 300px; overflow-y: auto; }
 .hist-md img { max-width: 100%; }
+
+/* ============================================================
+   v1.8 — note graph & find in note
+   ============================================================ */
+.graph-modal { width: min(920px, 96vw); height: min(74vh, 740px); }
+.graph-modal .modal-head .spacer { flex: 1; }
+.graph-wrap {
+  position: relative;
+  flex: 1; min-height: 300px;
+  overflow: hidden;
+  cursor: grab;
+  background: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border-top: 1px solid var(--border);
+}
+.graph-wrap:active { cursor: grabbing; }
+#graphSvg { width: 100%; height: 100%; display: block; touch-action: none; }
+.gl { stroke: var(--border-strong); stroke-width: 1.2; }
+.gn circle { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; cursor: pointer; transition: fill .12s ease; }
+.gn:hover circle { fill: var(--accent); }
+.gn text { fill: var(--text-muted); font-size: 10.5px; font-weight: 600; text-anchor: middle; pointer-events: none; }
+.gn:hover text { fill: var(--text); }
+.gn.active circle { fill: var(--accent); stroke-width: 2.5; }
+.gn.active text { fill: var(--text); font-weight: 700; }
+.graph-hint {
+  position: absolute; bottom: 8px; left: 16px; right: 16px;
+  text-align: center; font-size: 11px; color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* find bar */
+.find-bar {
+  position: absolute; top: 12px; right: 18px; z-index: 30;
+  display: flex; align-items: center; gap: 2px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px 5px;
+  box-shadow: var(--shadow);
+}
+.find-bar input {
+  width: 190px;
+  border: 0; background: transparent;
+  font-size: 13px; color: var(--text);
+  padding: 5px 8px;
+  outline: none;
+}
+.find-bar input:focus { box-shadow: none; }
+.find-count { font-size: 11.5px; color: var(--text-muted); padding: 0 6px; white-space: nowrap; }
+.find-bar .icon-btn { width: 26px; height: 26px; }
+mark.find-hit { background: rgba(240, 180, 41, 0.35); color: inherit; border-radius: 3px; padding: 0 1px; }
+mark.find-hit.cur { background: var(--accent); color: #fff; }
+@media (max-width: 640px) { .find-bar { right: 10px; left: 10px; } .find-bar input { width: auto; flex: 1; } }

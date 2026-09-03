@@ -59,6 +59,9 @@
         <button class="btn ghost block" id="dailyBtn" data-icon="calendar">
           <span>Today&rsquo;s journal</span><span class="streak" id="streakBadge" hidden></span>
         </button>
+        <button class="btn ghost block" id="graphBtn" data-icon="graph">
+          <span>Note graph</span>
+        </button>
       </div>
 
       <label class="search-row">
@@ -123,6 +126,13 @@
 
     <!-- ======================= MAIN ======================= -->
     <main class="main">
+      <div class="find-bar" id="findBar" hidden>
+        <input id="findInput" type="text" placeholder="Find in note…" autocomplete="off" spellcheck="false" aria-label="Find in note" />
+        <span class="find-count" id="findCount"></span>
+        <button class="icon-btn" id="findPrevBtn" data-icon="chevUp" title="Previous match (Shift+Enter)" aria-label="Previous match"></button>
+        <button class="icon-btn" id="findNextBtn" data-icon="chevDown" title="Next match (Enter)" aria-label="Next match"></button>
+        <button class="icon-btn" id="findCloseBtn" data-icon="x" title="Close (Esc)" aria-label="Close find"></button>
+      </div>
       <section class="empty-state" id="emptyState">
         <div class="empty-art" data-icon="book"></div>
         <h1 id="emptyTitle">Welcome to Jotter</h1>
@@ -279,6 +289,23 @@
     </div>
   </div>
 
+  <!-- ======================= NOTE GRAPH MODAL ======================= -->
+  <div class="modal-overlay" id="graphOverlay" hidden>
+    <div class="modal graph-modal" role="dialog" aria-modal="true" aria-label="Note graph">
+      <div class="modal-head">
+        <h2>Note graph</h2>
+        <span class="stat-hint" id="graphMeta"></span>
+        <span class="spacer"></span>
+        <button class="icon-btn" id="graphFitBtn" data-icon="maximize" title="Fit to view" aria-label="Fit to view"></button>
+        <button class="icon-btn" id="graphCloseBtn" data-icon="x" aria-label="Close"></button>
+      </div>
+      <div class="graph-wrap" id="graphWrap">
+        <svg id="graphSvg"></svg>
+        <div class="graph-hint">drag bubbles &middot; scroll to zoom &middot; drag the background to pan &middot; click a note to open it</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ======================= VERSION HISTORY MODAL ======================= -->
   <div class="modal-overlay" id="histOverlay" hidden>
     <div class="modal hist-modal" role="dialog" aria-modal="true" aria-label="Version history">
@@ -347,6 +374,7 @@
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tag chips</b> &mdash; click to filter by a tag; <b>right-click</b> to rename it or remove it from all notes</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days)</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="panelLeft"></span><div class="bg-txt"><b>Resize / hide sidebar</b> &mdash; drag the sidebar&rsquo;s right edge to resize it; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or use the &#9776; toolbar button to hide it entirely</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="graph"></span><div class="bg-txt"><b>Note graph</b> &mdash; your notes as a map of [[wiki-links]]; drag, zoom and pan it, click a bubble to open the note</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Backup &#9662;</b> &mdash; JSON backup of everything, or export all notes as one Markdown file</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="upload"></span><div class="bg-txt"><b>Import &#9662;</b> &mdash; restore a backup or import .md files; you can also just drag &amp; drop files onto the app</div></div>
 
@@ -366,6 +394,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="check"></span><div class="bg-txt"><b>Checkboxes</b> &mdash; tick tasks in the preview and the markdown updates itself</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="image"></span><div class="bg-txt"><b>Paste image</b> &mdash; <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes screenshots straight into the note (auto-resized, stored locally); you can also drag image files in</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="clock"></span><div class="bg-txt"><b>Timestamp</b> &mdash; <kbd>Ctrl</kbd>+<kbd>;</kbd> inserts the current date &amp; time (great for journals and logs)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="search"></span><div class="bg-txt"><b>Find in note</b> &mdash; <kbd>Ctrl</kbd>+<kbd>F</kbd> highlights every match in the preview and jumps between them</div></div>
           <div class="bg-row"><span class="bg-ico bg-mono">[[ ]]</span><div class="bg-txt"><b>Wiki-links</b> &mdash; type <code>[[</code> for autocomplete; click a link to open (or create) that note</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="plusL"></span><div class="bg-txt"><b>Floating +</b> &mdash; on mobile, quick new note from anywhere</div></div>
         </div>
@@ -373,7 +402,14 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.7 <span class="pill">current</span></h4>
+            <h4>v1.8 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128376; <b>Note graph</b> &mdash; see your whole notebook as a living map: every note is a bubble, every [[wiki-link]] a connection. Drag them around, zoom, pan, and click a bubble to open the note (button under <b>Today&rsquo;s journal</b>, or <kbd>Ctrl</kbd>+<kbd>K</kbd>)</li>
+              <li>&#128269; <b>Find in note</b> &mdash; <kbd>Ctrl</kbd>+<kbd>F</kbd> now highlights every match in the preview and jumps between them (the sidebar search stays on <kbd>/</kbd>)</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.7 &mdash; version history &amp; share-as-link</h4>
             <ul>
               <li>&#128338; <b>Version history</b> &mdash; Jotter snapshots your note automatically every ~10 minutes while you edit (More &#9662; &rarr; Version history). Preview any version and restore it in one click &mdash; restoring keeps a snapshot first, so it&rsquo;s always undoable</li>
               <li>&#128279; <b>Share a note as a link</b> &mdash; More &#9662; &rarr; Share as link copies a URL that carries the note inside it; anyone who opens it gets a copy in their Jotter. No account, no server &mdash; perfect for sending a note to your phone</li>

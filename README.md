@@ -34,6 +34,8 @@
 - 📏 **Resizable, hideable sidebar** — drag its edge to resize; `Ctrl`/`⌘`+`\` hides it for distraction-free writing
 - 🕰 **Version history** — automatic snapshots while you edit; preview and restore any of the last 10 versions (More ▾)
 - 🔗 **Share a note as a link** — the whole note rides inside the URL; opening it on any device saves a copy — no account, no server
+- 🕸 **Note graph** — see your notes as an interactive map of wiki-links: drag, zoom, pan, click a bubble to open the note
+- 🔍 **Find in note** — `Ctrl`/`⌘`+`F` highlights every match in the preview and jumps between them
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags — with match highlighting
@@ -104,7 +106,8 @@ python3 -m http.server 8000
 | `?` | Help & guide |
 | `N` | New note (when not typing) |
 | `Ctrl`/`⌘` + `Alt` + `N` | New note (from anywhere) |
-| `/` or `Ctrl`/`⌘` + `F` | Focus search |
+| `/` | Focus the sidebar search |
+| `Ctrl`/`⌘` + `F` | Find in the current note (highlight & jump) |
 | `Ctrl`/`⌘` + `E` | Cycle view: Edit → Split → Preview |
 | `Ctrl`/`⌘` + `B` / `I` | Bold / italic (wraps selection) |
 | `Ctrl`/`⌘` + `;` | Insert timestamp |

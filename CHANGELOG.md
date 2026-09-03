@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.8 — note graph & find in note
+
+- 🕸 **Note graph** — your whole notebook as a living map: every note is a bubble (bigger = more `[[wiki-links]]`), every link a connection. It's a real force-directed physics simulation in pure SVG — drag bubbles around and watch them settle, scroll to zoom, drag the background to pan, double-click to re-fit, click a bubble to open the note. Open it with the **Note graph** button under *Today's journal* or via `Ctrl`+`K`
+- 🔍 **Find in note** — `Ctrl`+`F` now highlights every match in the rendered preview with a match counter and Enter/Shift+Enter to jump between them; the sidebar search stays on `/`
+
 ## v1.7 — version history & share-as-link
 
 - 🕰 **Version history** — Jotter snapshots the note you're editing automatically (at most one every ~10 minutes, only when something changed). Open *More ▾ → Version history* to browse the last 10 versions, preview any of them rendered, and restore in one click — restoring saves a snapshot of the current state first, so it's always undoable. Snapshots travel with backups and sync, and total snapshot storage is capped (~1.5 MB, oldest pruned first)

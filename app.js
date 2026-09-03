@@ -104,7 +104,9 @@
     chevLeft: svg('<polyline points="15 18 9 12 15 6"/>', 16),
     chevRight: svg('<polyline points="9 18 15 12 9 6"/>', 16),
     panelLeft: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/>', 16),
-    link: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', 16)
+    link: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', 16),
+    graph: svg('<circle cx="5" cy="6" r="3"/><circle cx="19" cy="6" r="3"/><circle cx="12" cy="19" r="3"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="7.2" y1="8.2" x2="10.5" y2="16.6"/><line x1="16.8" y1="8.2" x2="13.5" y2="16.6"/>', 16),
+    chevUp: svg('<polyline points="6 15 12 9 18 15"/>', 16)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -167,6 +169,10 @@
   var histOverlay = $('#histOverlay'), histCloseBtn = $('#histCloseBtn'), histNote = $('#histNote'), histSnapBtn = $('#histSnapBtn');
   var histList = $('#histList'), histPreview = $('#histPreview'), histPreviewTitle = $('#histPreviewTitle');
   var histRestoreBtn = $('#histRestoreBtn'), histMd = $('#histMd'), histBtn = $('#histBtn'), shareBtn = $('#shareBtn');
+  var graphBtn = $('#graphBtn'), graphOverlay = $('#graphOverlay'), graphCloseBtn = $('#graphCloseBtn'), graphFitBtn = $('#graphFitBtn');
+  var graphMeta = $('#graphMeta'), graphWrap = $('#graphWrap'), graphSvg = $('#graphSvg');
+  var findBar = $('#findBar'), findInput = $('#findInput'), findCount = $('#findCount');
+  var findPrevBtn = $('#findPrevBtn'), findNextBtn = $('#findNextBtn'), findCloseBtn = $('#findCloseBtn');
   var syncTokenInput = $('#syncTokenInput'), syncSaveBtn = $('#syncSaveBtn'), syncStatus = $('#syncStatus');
   var syncNowBtn = $('#syncNowBtn'), syncAutoChk = $('#syncAutoChk'), syncDisconnectBtn = $('#syncDisconnectBtn'), aboutInfo = $('#aboutInfo');
   var promptOverlay = $('#promptOverlay'), promptTitle = $('#promptTitle'), promptInput = $('#promptInput');
@@ -577,6 +583,7 @@
       : '<p>' + escapeHtml(val) + '</p>';
     if (!val.trim()) previewArea.innerHTML = '<p class="placeholder-line">Nothing to preview yet…</p>';
     markMissingWikiLinks();
+    if (!findBar.hidden) queueFind();
   }
 
   function markMissingWikiLinks() {
@@ -1447,7 +1454,7 @@
     }
     else if (mod && e.key === '.') { e.preventDefault(); toggleZen(); }
     else if (mod && e.altKey && k === 'n') { e.preventDefault(); createNote(); }
-    else if (mod && k === 'f') { e.preventDefault(); focusSearch(); }
+    else if (mod && k === 'f') { e.preventDefault(); openFind(); }
     else if (mod && k === 's') { e.preventDefault(); saveActive(); toast('Saved'); }
     else if (mod && k === 'e') { e.preventDefault(); cycleView(); }
     else if (mod && k === '\\') { e.preventDefault(); toggleSidebar(); }
@@ -1456,6 +1463,7 @@
     else if (k === 'n' && !inField && !mod && !e.altKey) { createNote(); }
     else if (e.key === 'Escape') {
       if (!ctxMenu.hidden) ctxMenu.hidden = true;
+      else if (!findBar.hidden) closeFind();
       else if (!promptOverlay.hidden) closePrompt();
       else if (!histOverlay.hidden) closeHist();
       else if (!statsOverlay.hidden) closeStats();
@@ -1791,6 +1799,8 @@
     if (sync.token) A('Sync notes now', '', ICONS.cloud, function () { syncNow(false); });
     A('Backup notes (JSON)', '', ICONS.download, function () { exportBackup(); });
     A('Notebook insights', '', ICONS.chart, function () { openStats(); });
+    A('Note graph', '', ICONS.graph, function () { openGraph(); });
+    A('Find in note', 'Ctrl F', ICONS.search, function () { openFind(); });
     A('Version history', '', ICONS.undo, function () { openHist(); });
     A('Share note as link', '', ICONS.link, function () { shareNoteLink(); });
     A('Toggle sidebar', 'Ctrl \\', ICONS.panelLeft, function () { toggleSidebar(); });
@@ -2110,7 +2120,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.7 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.8 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2457,6 +2467,287 @@
   }
   shareBtn.addEventListener('click', function () { noteMenu.hidden = true; shareNoteLink(); });
 
+  /* ---------- note graph ---------- */
+  var GRAPH = { nodes: [], links: [], pan: { x: 0, y: 0 }, zoom: 1, alpha: 0, running: false, dragNode: null, panning: false, moved: false, lastP: null };
+
+  function buildGraphData() {
+    var live = notes.filter(function (n) { return !n.deleted; });
+    var byTitle = {}, byId = {};
+    live.forEach(function (n) {
+      var t = (n.title || '').trim().toLowerCase();
+      if (t && !byTitle[t]) byTitle[t] = n;
+    });
+    var nodes = live.map(function (n) {
+      var v = { id: n.id, title: n.title || 'Untitled', x: 0, y: 0, vx: 0, vy: 0, deg: 0 };
+      byId[n.id] = v;
+      return v;
+    });
+    var seen = {}, links = [];
+    live.forEach(function (n) {
+      var re = /\[\[([^\[\]]+)\]\]/g, m;
+      while ((m = re.exec(String(n.body || '')))) {
+        var t = m[1].trim().toLowerCase();
+        var target = byTitle[t];
+        if (!target || target.id === n.id) continue;
+        var key = n.id < target.id ? n.id + '~' + target.id : target.id + '~' + n.id;
+        if (seen[key]) continue;
+        seen[key] = 1;
+        links.push({ a: byId[n.id], b: byId[target.id] });
+      }
+    });
+    links.forEach(function (l) { l.a.deg++; l.b.deg++; });
+    return { nodes: nodes, links: links };
+  }
+
+  function graphTick() {
+    var ns = GRAPH.nodes, ls = GRAPH.links, i, j;
+    for (i = 0; i < ns.length; i++) {
+      for (j = i + 1; j < ns.length; j++) {
+        var a = ns[i], b = ns[j];
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var d2 = dx * dx + dy * dy || 0.01;
+        if (d2 > 100000) continue;
+        var d = Math.sqrt(d2);
+        var f = 2600 / d2;
+        var fx = (dx / d) * f, fy = (dy / d) * f;
+        a.vx -= fx; a.vy -= fy;
+        b.vx += fx; b.vy += fy;
+      }
+    }
+    ls.forEach(function (l) {
+      var dx = l.b.x - l.a.x, dy = l.b.y - l.a.y;
+      var d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+      var f = (d - 95) * 0.025;
+      var fx = (dx / d) * f, fy = (dy / d) * f;
+      l.a.vx += fx; l.a.vy += fy;
+      l.b.vx -= fx; l.b.vy -= fy;
+    });
+    ns.forEach(function (v) {
+      v.vx -= v.x * 0.003;
+      v.vy -= v.y * 0.003;
+      if (v === GRAPH.dragNode) { v.vx = 0; v.vy = 0; return; }
+      v.vx *= 0.82; v.vy *= 0.82;
+      v.x += v.vx; v.y += v.vy;
+    });
+  }
+
+  function renderGraph() {
+    var w = graphSvg.clientWidth || 600, h = graphSvg.clientHeight || 400;
+    var t = 'translate(' + (w / 2 + GRAPH.pan.x).toFixed(1) + ',' + (h / 2 + GRAPH.pan.y).toFixed(1) + ') scale(' + GRAPH.zoom.toFixed(3) + ')';
+    var html = '<g transform="' + t + '">';
+    GRAPH.links.forEach(function (l) {
+      html += '<line class="gl" x1="' + l.a.x.toFixed(1) + '" y1="' + l.a.y.toFixed(1) + '" x2="' + l.b.x.toFixed(1) + '" y2="' + l.b.y.toFixed(1) + '"/>';
+    });
+    GRAPH.nodes.forEach(function (v) {
+      var r = 7 + Math.min(10, v.deg * 2.5);
+      html += '<g class="gn' + (v.id === ui.activeId ? ' active' : '') + '" data-id="' + escapeHtml(v.id) + '" transform="translate(' + v.x.toFixed(1) + ',' + v.y.toFixed(1) + ')">' +
+        '<title>' + escapeHtml(v.title) + '</title>' +
+        '<circle r="' + r.toFixed(1) + '"/>' +
+        '<text y="' + (r + 13).toFixed(1) + '">' + escapeHtml(truncTxt(v.title, 18)) + '</text></g>';
+    });
+    graphSvg.innerHTML = html + '</g>';
+  }
+
+  function heatGraph(a) {
+    GRAPH.alpha = Math.max(GRAPH.alpha, a);
+    if (!GRAPH.running && !graphOverlay.hidden) {
+      GRAPH.running = true;
+      requestAnimationFrame(graphFrame);
+    }
+  }
+  function graphFrame() {
+    if (graphOverlay.hidden) { GRAPH.running = false; return; }
+    graphTick();
+    renderGraph();
+    GRAPH.alpha *= 0.985;
+    if (GRAPH.alpha > 0.02 || GRAPH.dragNode) requestAnimationFrame(graphFrame);
+    else GRAPH.running = false;
+  }
+
+  function fitGraph() {
+    if (!GRAPH.nodes.length) return;
+    var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    GRAPH.nodes.forEach(function (v) {
+      if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+    });
+    var w = graphSvg.clientWidth || 600, h = graphSvg.clientHeight || 400;
+    var bw = Math.max(80, maxX - minX), bh = Math.max(80, maxY - minY);
+    GRAPH.zoom = Math.max(0.25, Math.min(2.2, Math.min((w - 130) / bw, (h - 130) / bh)));
+    GRAPH.pan.x = -((minX + maxX) / 2) * GRAPH.zoom;
+    GRAPH.pan.y = -((minY + maxY) / 2) * GRAPH.zoom;
+    renderGraph();
+  }
+
+  function openGraph() {
+    var live = notes.filter(function (n) { return !n.deleted; });
+    if (!live.length) { toast('Create some notes first — the graph shows how they connect'); return; }
+    var data = buildGraphData();
+    GRAPH.nodes = data.nodes;
+    GRAPH.links = data.links;
+    var R = 60 + GRAPH.nodes.length * 5;
+    GRAPH.nodes.forEach(function (v, i) {
+      var ang = (i / GRAPH.nodes.length) * Math.PI * 2;
+      v.x = Math.cos(ang) * R; v.y = Math.sin(ang) * R;
+      v.vx = 0; v.vy = 0; v.deg = v.deg || 0;
+    });
+    GRAPH.pan = { x: 0, y: 0 };
+    GRAPH.zoom = 1;
+    GRAPH.dragNode = null;
+    graphMeta.textContent = GRAPH.nodes.length + ' notes · ' + GRAPH.links.length + (GRAPH.links.length === 1 ? ' link' : ' links');
+    graphOverlay.hidden = false;
+    heatGraph(1);
+    setTimeout(fitGraph, 1400);
+  }
+  function closeGraph() {
+    graphOverlay.hidden = true;
+    GRAPH.nodes = []; GRAPH.links = []; GRAPH.running = false; GRAPH.dragNode = null;
+  }
+  graphBtn.addEventListener('click', openGraph);
+  graphCloseBtn.addEventListener('click', closeGraph);
+  graphFitBtn.addEventListener('click', fitGraph);
+  graphOverlay.addEventListener('click', function (e) { if (e.target === graphOverlay) closeGraph(); });
+
+  function toSim(e) {
+    var r = graphSvg.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left - r.width / 2 - GRAPH.pan.x) / GRAPH.zoom,
+      y: (e.clientY - r.top - r.height / 2 - GRAPH.pan.y) / GRAPH.zoom
+    };
+  }
+  graphSvg.addEventListener('pointerdown', function (e) {
+    if (graphOverlay.hidden) return;
+    GRAPH.moved = false;
+    GRAPH.lastP = { x: e.clientX, y: e.clientY };
+    var g = e.target.closest ? e.target.closest('g.gn') : null;
+    if (g) {
+      var id = g.getAttribute('data-id');
+      GRAPH.dragNode = GRAPH.nodes.filter(function (v) { return v.id === id; })[0] || null;
+    } else {
+      GRAPH.panning = true;
+    }
+    try { graphSvg.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
+    e.preventDefault();
+  });
+  graphSvg.addEventListener('pointermove', function (e) {
+    if (graphOverlay.hidden || (!GRAPH.dragNode && !GRAPH.panning)) return;
+    if (GRAPH.lastP && (Math.abs(e.clientX - GRAPH.lastP.x) > 3 || Math.abs(e.clientY - GRAPH.lastP.y) > 3)) GRAPH.moved = true;
+    if (GRAPH.dragNode) {
+      var p = toSim(e);
+      GRAPH.dragNode.x = p.x; GRAPH.dragNode.y = p.y;
+      heatGraph(0.35);
+      return;
+    }
+    GRAPH.pan.x += e.clientX - GRAPH.lastP.x;
+    GRAPH.pan.y += e.clientY - GRAPH.lastP.y;
+    GRAPH.lastP = { x: e.clientX, y: e.clientY };
+    renderGraph();
+  });
+  graphSvg.addEventListener('pointerup', function (e) {
+    var clicked = GRAPH.dragNode;
+    GRAPH.panning = false;
+    GRAPH.dragNode = null;
+    if (clicked && !GRAPH.moved) {
+      closeGraph();
+      openNote(clicked.id);
+    }
+  });
+  graphSvg.addEventListener('wheel', function (e) {
+    if (graphOverlay.hidden) return;
+    e.preventDefault();
+    var r = graphSvg.getBoundingClientRect();
+    var mx = e.clientX - r.left - r.width / 2, my = e.clientY - r.top - r.height / 2;
+    var nz = Math.max(0.25, Math.min(3, GRAPH.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+    GRAPH.pan.x = mx - (mx - GRAPH.pan.x) * (nz / GRAPH.zoom);
+    GRAPH.pan.y = my - (my - GRAPH.pan.y) * (nz / GRAPH.zoom);
+    GRAPH.zoom = nz;
+    renderGraph();
+  }, { passive: false });
+  graphSvg.addEventListener('dblclick', function (e) {
+    if (e.target.closest && e.target.closest('g.gn')) return;
+    fitGraph();
+  });
+
+  /* ---------- find in note ---------- */
+  var findHits = [], findIdx = 0;
+  var queueFind = debounce(runFind, 250);
+
+  function clearFindMarks() {
+    $$('mark.find-hit', previewArea).forEach(function (m) {
+      var p = m.parentNode;
+      if (!p) return;
+      while (m.firstChild) p.insertBefore(m.firstChild, m);
+      p.removeChild(m);
+      p.normalize();
+    });
+  }
+  function runFind() {
+    clearFindMarks();
+    findHits = [];
+    findIdx = 0;
+    var q = findInput.value;
+    if (!q) { findCount.textContent = ''; return; }
+    var lq = q.toLowerCase();
+    var walker = document.createTreeWalker(previewArea, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        if (!node.nodeValue || node.nodeValue.toLowerCase().indexOf(lq) === -1) return NodeFilter.FILTER_REJECT;
+        var p = node.parentNode;
+        if (p && (p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var texts = [], t;
+    while ((t = walker.nextNode())) texts.push(t);
+    texts.forEach(function (node) {
+      var text = node.nodeValue, lt = text.toLowerCase();
+      var i = lt.indexOf(lq);
+      var frag = document.createDocumentFragment(), pos = 0;
+      while (i !== -1) {
+        if (i > pos) frag.appendChild(document.createTextNode(text.slice(pos, i)));
+        var mk = document.createElement('mark');
+        mk.className = 'find-hit';
+        mk.textContent = text.slice(i, i + q.length);
+        frag.appendChild(mk);
+        findHits.push(mk);
+        pos = i + q.length;
+        i = lt.indexOf(lq, pos);
+      }
+      if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+      if (node.parentNode) node.parentNode.replaceChild(frag, node);
+    });
+    if (findHits.length) focusFindHit(0);
+    findCount.textContent = findHits.length ? '1 / ' + findHits.length : '0';
+  }
+  function focusFindHit(i) {
+    findIdx = (i + findHits.length) % findHits.length;
+    findHits.forEach(function (m) { m.classList.remove('cur'); });
+    var m = findHits[findIdx];
+    if (m && m.scrollIntoView) m.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (m) m.classList.add('cur');
+    findCount.textContent = (findIdx + 1) + ' / ' + findHits.length;
+  }
+  function openFind() {
+    var n = getNote(ui.activeId);
+    if (!n || n.deleted) { toast('Open a note first'); return; }
+    if (settings.view === 'edit') setView('split');
+    findBar.hidden = false;
+    findInput.focus();
+    findInput.select();
+    runFind();
+  }
+  function closeFind() {
+    findBar.hidden = true;
+    clearFindMarks();
+    findCount.textContent = '';
+  }
+  findInput.addEventListener('input', queueFind);
+  findInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); focusFindHit(findIdx + (e.shiftKey ? -1 : 1)); }
+  });
+  findNextBtn.addEventListener('click', function () { if (findHits.length) focusFindHit(findIdx + 1); });
+  findPrevBtn.addEventListener('click', function () { if (findHits.length) focusFindHit(findIdx - 1); });
+  findCloseBtn.addEventListener('click', closeFind);
+
   /* ---------- notebook insights ---------- */
   function noteWords(n) { return (String(n.body || '').trim().match(/\S+/g) || []).length; }
   function truncTxt(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '\u2026' : s; }
@@ -2738,11 +3029,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '8') {
-      store.set(VER_KEY, '8');
+    if (ver !== '9') {
+      store.set(VER_KEY, '9');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.7 \u2014 version history (More \u25BE) & share notes as links', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.8 \u2014 Note graph (see your notes as a map) & find in note (Ctrl+F)', { timeout: 6500 });
         }, 700);
       }
     }
