@@ -31,6 +31,7 @@
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags — with match highlighting
 - 📅 **Today's journal** — one click creates a dated daily entry with a journal template (and a 🔥 streak counter)
+- 📖 **Built-in guide** — press `?` for a getting-started guide, a what-every-button-does reference, and version history
 - 🌗 **Light & dark themes** + six accent colours
 - 💾 **Private by design** — notes are stored in *your browser's* local storage; nothing ever leaves your device
 - 🔄 **Backup & restore** — export all notes to JSON (or as one Markdown file); restore merges them back; drag & drop `.md` files to import them as notes
@@ -93,6 +94,7 @@ python3 -m http.server 8000
 | --- | --- |
 | `Ctrl`/`⌘` + `K` | Command palette (search notes & run actions) |
 | `Ctrl`/`⌘` + `.` | Focus mode (Esc to exit) |
+| `?` | Help & guide |
 | `N` | New note (when not typing) |
 | `Ctrl`/`⌘` + `Alt` + `N` | New note (from anywhere) |
 | `/` or `Ctrl`/`⌘` + `F` | Focus search |

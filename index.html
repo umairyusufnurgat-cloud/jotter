@@ -25,7 +25,7 @@
           <button class="icon-btn" id="cmdBtn" data-icon="cmd" title="Command palette (Ctrl K)" aria-label="Command palette"></button>
           <div class="menu-anchor">
             <button class="icon-btn" id="accentBtn" data-icon="droplet" title="Accent colour" aria-label="Accent colour" aria-haspopup="true" aria-expanded="false"></button>
-            <div class="menu up accent-menu" id="accentMenu" hidden>
+            <div class="accent-menu menu" id="accentMenu" hidden>
               <button class="swatch" data-accent="indigo" style="--c:#6558d3" aria-label="Indigo" title="Indigo"></button>
               <button class="swatch" data-accent="teal" style="--c:#0f9187" aria-label="Teal" title="Teal"></button>
               <button class="swatch" data-accent="blue" style="--c:#2563eb" aria-label="Blue" title="Blue"></button>
@@ -36,6 +36,7 @@
           </div>
           <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
           <button class="icon-btn" id="settingsBtn" data-icon="sliders" title="Settings & sync" aria-label="Settings and sync"></button>
+          <button class="icon-btn" id="helpBtn" data-icon="help" title="Help & guide (?)" aria-label="Help and guide"></button>
         </div>
       </div>
 
@@ -245,6 +246,105 @@
           <h3>ℹ️ About</h3>
           <p class="set-desc" id="aboutInfo"></p>
         </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= HELP MODAL ======================= -->
+  <div class="modal-overlay" id="helpOverlay" hidden>
+    <div class="modal help-modal" role="dialog" aria-modal="true" aria-label="Help and guide">
+      <div class="modal-head">
+        <h2>Help &amp; guide</h2>
+        <button class="icon-btn" id="helpCloseBtn" data-icon="x" aria-label="Close"></button>
+      </div>
+      <div class="help-tabs" id="helpTabs">
+        <button data-tab="guide" class="active">Getting started</button>
+        <button data-tab="buttons">Buttons guide</button>
+        <button data-tab="whatsnew">What&rsquo;s new</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- ============ TAB 1: GETTING STARTED ============ -->
+        <div class="help-pane active" data-pane="guide">
+          <div class="gs-step"><span class="gs-num">1</span><div><b>Create your first note</b><br />Click <b>New note</b> (or press <kbd>N</kbd>). Give it a title, then write below &mdash; everything saves automatically as you type.</div></div>
+          <div class="gs-step"><span class="gs-num">2</span><div><b>Write in Markdown</b><br /><code>**bold**</code> <code>*italic*</code> <code># Heading</code> <code>- list</code> <code>- [ ] task</code> <code>[link](url)</code>. Switch to <b>Split</b> view (<kbd>Ctrl</kbd>+<kbd>E</kbd>) to see it rendered live while you type.</div></div>
+          <div class="gs-step"><span class="gs-num">3</span><div><b>Organise</b><br />Add <b>tags</b> above the editor (type a name + <kbd>&#8629;</kbd>), then filter by them in the sidebar. <b>Pin</b> &#128204; or <b>star</b> &#11088; important notes. Search everything with <kbd>/</kbd>.</div></div>
+          <div class="gs-step"><span class="gs-num">4</span><div><b>Link notes together</b><br />Type <code>[[</code> and pick a note to insert a link to it. A <em>dashed</em> link creates the note when clicked &mdash; build your own wiki.</div></div>
+          <div class="gs-step"><span class="gs-num">5</span><div><b>Keep a journal</b><br /><b>Today&rsquo;s journal</b> creates a dated entry with a template. Write daily and watch the &#128293; streak grow on the button.</div></div>
+          <div class="gs-step"><span class="gs-num">6</span><div><b>Keep your notes safe</b><br />Notes live in this browser. Use <b>Backup</b> for a JSON file you can keep anywhere, or set up &#9934;&#65039; <b>GitHub sync</b> in Settings so notes follow you to every device &mdash; free, through your own GitHub.</div></div>
+          <div class="gs-step"><span class="gs-num">7</span><div><b>Install it as an app</b><br />In your browser menu choose <b>Install Jotter</b> (on mobile: <em>Add to Home screen</em>). It then opens like a native app and works fully offline.</div></div>
+          <div class="gs-step"><span class="gs-num">8</span><div><b>Everything at your fingertips</b><br /><kbd>Ctrl</kbd>+<kbd>K</kbd> command palette &nbsp;&middot;&nbsp; <kbd>Ctrl</kbd>+<kbd>.</kbd> focus mode &nbsp;&middot;&nbsp; <kbd>?</kbd> this guide.</div></div>
+        </div>
+
+        <!-- ============ TAB 2: BUTTONS GUIDE ============ -->
+        <div class="help-pane" data-pane="buttons">
+          <h4>Sidebar &mdash; top bar</h4>
+          <div class="bg-row"><span class="bg-ico" data-icon="cmd"></span><div class="bg-txt"><b>Command palette</b> &mdash; search notes &amp; run any action (<kbd>Ctrl</kbd>+<kbd>K</kbd>)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="droplet"></span><div class="bg-txt"><b>Accent colour</b> &mdash; pick from six accent colours</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="sun"></span><div class="bg-txt"><b>Theme</b> &mdash; switch between light and dark</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="sliders"></span><div class="bg-txt"><b>Settings &amp; sync</b> &mdash; GitHub sync setup and storage info</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="help"></span><div class="bg-txt"><b>Help &amp; guide</b> &mdash; the guide you are reading (<kbd>?</kbd>)</div></div>
+
+          <h4>Sidebar</h4>
+          <div class="bg-row"><span class="bg-ico" data-icon="filePlus"></span><div class="bg-txt"><b>New note</b> &mdash; create a blank note (<kbd>N</kbd>)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="chevDown"></span><div class="bg-txt"><b>New from template &#9662;</b> &mdash; journal, meeting, reading, project, or brain-dump templates</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="calendar"></span><div class="bg-txt"><b>Today&rsquo;s journal</b> &mdash; dated entry with a journal template; the &#128293; streak appears after 2+ days in a row</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="search"></span><div class="bg-txt"><b>Search</b> &mdash; live search across titles, text and tags (<kbd>/</kbd>); matches are highlighted</div></div>
+          <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tag chips</b> &mdash; click to filter by a tag; <b>right-click</b> to rename it or remove it from all notes</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Trash</b> &mdash; switch between your notes and the trash (deleted notes rest 30 days)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Backup &#9662;</b> &mdash; JSON backup of everything, or export all notes as one Markdown file</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="upload"></span><div class="bg-txt"><b>Import &#9662;</b> &mdash; restore a backup or import .md files; you can also just drag &amp; drop files onto the app</div></div>
+
+          <h4>Editor toolbar</h4>
+          <div class="bg-row"><span class="bg-ico" data-icon="menu"></span><div class="bg-txt"><b>Open sidebar</b> &mdash; on mobile, slides the sidebar in</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="columns"></span><div class="bg-txt"><b>Edit / Split / Preview</b> &mdash; writing modes; Split shows the live-rendered result beside your text (<kbd>Ctrl</kbd>+<kbd>E</kbd> cycles)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="listIcon"></span><div class="bg-txt"><b>Outline</b> &mdash; lists every heading in this note; click one to jump to it</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="maximize"></span><div class="bg-txt"><b>Focus mode</b> &mdash; hide everything but your writing (<kbd>Ctrl</kbd>+<kbd>.</kbd>, <kbd>Esc</kbd> exits)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="star"></span><div class="bg-txt"><b>Star</b> &mdash; mark this note as a favourite</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="pin"></span><div class="bg-txt"><b>Pin</b> &mdash; keep this note at the top of the list</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Download</b> &mdash; save this note as a <code>.md</code> file</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="printer"></span><div class="bg-txt"><b>Print</b> &mdash; print or save as PDF with clean print styles</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, or move it to trash</div></div>
+
+          <h4>In the editor</h4>
+          <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tags</b> &mdash; type a name and press <kbd>&#8629;</kbd>; click &times; on a chip to remove it</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="check"></span><div class="bg-txt"><b>Checkboxes</b> &mdash; tick tasks in the preview and the markdown updates itself</div></div>
+          <div class="bg-row"><span class="bg-ico bg-mono">[[ ]]</span><div class="bg-txt"><b>Wiki-links</b> &mdash; type <code>[[</code> for autocomplete; click a link to open (or create) that note</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="plusL"></span><div class="bg-txt"><b>Floating +</b> &mdash; on mobile, quick new note from anywhere</div></div>
+        </div>
+
+        <!-- ============ TAB 3: WHAT'S NEW ============ -->
+        <div class="help-pane" data-pane="whatsnew">
+          <div class="wn-version">
+            <h4>v1.3 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#129658; Fixed the accent-colour menu (it was opening off-screen) and the Outline button</li>
+              <li>&#128214; Built-in Help &amp; guide &mdash; press <kbd>?</kbd> any time</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.2 &mdash; sync &amp; focus</h4>
+            <ul>
+              <li>&#9934;&#65039; GitHub Gist sync &mdash; free private cloud through your own GitHub (Settings &rarr; Sync), with auto-sync</li>
+              <li>&#128202; Outline, &#129509; focus mode (<kbd>Ctrl</kbd>+<kbd>.</kbd>), &#127991;&#65039; tag rename/delete via right-click, &#128269; search highlighting</li>
+              <li>&#128241; Real PNG icons for proper install prompts</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.1 &mdash; the power update</h4>
+            <ul>
+              <li>&#8984; Command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>), &#128279; wiki-links with autocomplete, &#129521; note templates, &#128293; journaling streak</li>
+              <li>&#128229; Import .md by drag &amp; drop, &#128230; export all as Markdown, &#127912; six accent colours, &#128241; mobile + button, &#128260; update prompts</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.0 &mdash; initial release</h4>
+            <ul>
+              <li>Markdown editor with split preview and interactive task lists; tags, pin/star, search, trash with 30-day recovery; backup &amp; restore; light/dark themes; installable PWA that works offline &mdash; zero dependencies</li>
+            </ul>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>

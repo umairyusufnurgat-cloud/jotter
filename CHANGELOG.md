@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.3 — help center & fixes
+
+- 🩹 Fixed the accent-colour menu (it opened off-screen, so clicking the droplet appeared to do nothing)
+- 🩹 Fixed the Outline button (an inverted condition meant it never opened)
+- 📖 **Built-in Help & guide** — press `?` (or the ? icon in the sidebar): three tabs covering a getting-started guide, a reference for what every button does, and the version history
+- ⌨️ New shortcut: `?` opens help; the command palette gained a Help action
+- 🩹 Service worker bumped to v4
+
 ## v1.2 — sync & focus
 
 - ☁️ **GitHub Gist sync** — free private cloud for your notes, stored as a secret gist on your *own* GitHub account. Paste a gist-scope token in Settings, then sync manually or enable auto-sync. Notes merge with newest-edit-wins, and "delete forever" travels between devices via tombstones

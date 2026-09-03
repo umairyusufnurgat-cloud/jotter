@@ -980,6 +980,85 @@ mark {
 }
 
 /* ============================================================
+   v1.3 — help center (guide / buttons / what's new)
+   ============================================================ */
+.help-modal { width: min(680px, 100%); }
+.help-modal .modal-body { flex: 1; min-height: 0; }
+.help-tabs { display: flex; gap: 2px; padding: 8px 14px 0; border-bottom: 1px solid var(--border); }
+.help-tabs button {
+  padding: 8px 13px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: 8px 8px 0 0;
+  transition: color .15s ease, background .15s ease;
+}
+.help-tabs button:hover { color: var(--text); background: var(--bg-hover); }
+.help-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.help-pane { display: none; }
+.help-pane.active { display: block; }
+.help-pane h4 {
+  margin: 18px 0 6px;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.help-pane h4:first-child { margin-top: 2px; }
+.help-pane code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--text);
+}
+.gs-step { display: flex; gap: 12px; margin-bottom: 15px; }
+.gs-num {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700; font-size: 12.5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-top: 1px;
+}
+.gs-step > div { font-size: 13px; line-height: 1.65; color: var(--text-muted); }
+.gs-step > div b { color: var(--text); }
+.bg-row {
+  display: flex; gap: 11px; align-items: flex-start;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.bg-row:last-child { border-bottom: 0; }
+.bg-ico {
+  flex: none;
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: var(--bg);
+}
+.bg-tag { font-weight: 700; font-size: 14px; color: var(--accent); }
+.bg-mono { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; color: var(--accent); }
+.bg-txt { font-size: 12.5px; line-height: 1.55; color: var(--text-muted); padding-top: 5px; }
+.bg-txt b { color: var(--text); }
+.wn-version { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.wn-version:last-child { border-bottom: 0; padding-bottom: 2px; }
+.wn-version h4 { margin: 0 0 6px; font-size: 14px; display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.wn-version .pill {
+  font-size: 10px; font-weight: 700;
+  background: var(--accent-soft); color: var(--accent);
+  padding: 2px 8px; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.wn-version ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--text-muted); line-height: 1.7; }
+
+/* ============================================================
    PRINT — print the current note only
    ============================================================ */
 @media print {

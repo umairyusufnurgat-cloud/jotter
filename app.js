@@ -94,7 +94,9 @@
     sliders: svg('<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', 16),
     maximize: svg('<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>', 16),
     cloud: svg('<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>', 14),
-    pencil: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', 14)
+    pencil: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', 14),
+    help: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>', 16),
+    check: svg('<polyline points="20 6 9 17 4 12"/>', 16)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -147,6 +149,7 @@
   var promptOkBtn = $('#promptOkBtn'), promptCancelBtn = $('#promptCancelBtn'), promptCloseBtn = $('#promptCloseBtn');
   var ctxMenu = $('#ctxMenu'), outlineBtn = $('#outlineBtn'), outlineMenu = $('#outlineMenu');
   var zenBtn = $('#zenBtn'), zenExitBtn = $('#zenExitBtn');
+  var helpBtn = $('#helpBtn'), helpOverlay = $('#helpOverlay'), helpCloseBtn = $('#helpCloseBtn'), helpTabsEl = $('#helpTabs');
   var storageNote = $('#storageNote'), emptyTrashBtn = $('#emptyTrashBtn');
   var emptyState = $('#emptyState'), emptyTitle = $('#emptyTitle'), emptyText = $('#emptyText');
   var emptyNewBtn = $('#emptyNewBtn'), emptyDailyBtn = $('#emptyDailyBtn'), clearFiltersBtn = $('#clearFiltersBtn');
@@ -278,7 +281,7 @@
     '',
     '---',
     '',
-    '\uD83D\uDCA1 Tip: press **Ctrl K** for the command palette, **N** for a new note, and **/** to search.'
+    '\uD83D\uDCA1 Tip: press **Ctrl K** for the command palette, **?** for the full guide, **N** for a new note, and **/** to search.'
   ].join('\n');
 
   function seed() {
@@ -1272,7 +1275,7 @@
 
     if (mod && k === 'k') {
       e.preventDefault();
-      if (settingsOverlay.hidden && promptOverlay.hidden) togglePalette();
+      if (settingsOverlay.hidden && promptOverlay.hidden && helpOverlay.hidden) togglePalette();
     }
     else if (mod && e.key === '.') { e.preventDefault(); toggleZen(); }
     else if (mod && e.altKey && k === 'n') { e.preventDefault(); createNote(); }
@@ -1280,11 +1283,13 @@
     else if (mod && k === 's') { e.preventDefault(); saveActive(); toast('Saved'); }
     else if (mod && k === 'e') { e.preventDefault(); cycleView(); }
     else if (k === '/' && !inField) { e.preventDefault(); focusSearch(); }
+    else if (e.key === '?' && !inField) { e.preventDefault(); openHelp(); }
     else if (k === 'n' && !inField && !mod && !e.altKey) { createNote(); }
     else if (e.key === 'Escape') {
       if (!ctxMenu.hidden) ctxMenu.hidden = true;
       else if (!promptOverlay.hidden) closePrompt();
       else if (!settingsOverlay.hidden) closeSettings();
+      else if (!helpOverlay.hidden) closeHelp();
       else if (!cmdkOverlay.hidden) closePalette();
       else if (wikiPop.open) hideWikiPop();
       else if (document.body.classList.contains('zen')) toggleZen();
@@ -1512,6 +1517,7 @@
     A('Show outline (headings)', '', ICONS.listIcon, function () { buildOutline(); closeAllMenus(); outlineMenu.hidden = false; });
     A('Toggle light / dark theme', '', ICONS.moon, function () { themeBtn.click(); });
     A('Open settings & sync', '', ICONS.sliders, openSettings);
+    A('Help & guide', '?', ICONS.help, openHelp);
     if (sync.token) A('Sync notes now', '', ICONS.cloud, function () { syncNow(false); });
     A('Backup notes (JSON)', '', ICONS.download, function () { exportBackup(); });
     A('Export all notes as Markdown', '', ICONS.fileText, function () { exportAllMd(); });
@@ -1829,7 +1835,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.2 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.3 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -1930,9 +1936,9 @@
     outlineMenu.innerHTML = html;
   }
   outlineBtn.addEventListener('click', function () {
-    var open = outlineMenu.hidden;
+    var wasHidden = outlineMenu.hidden;
     closeAllMenus();
-    if (!open) { buildOutline(); outlineMenu.hidden = false; }
+    if (wasHidden) { buildOutline(); outlineMenu.hidden = false; }
     outlineBtn.setAttribute('aria-expanded', String(!outlineMenu.hidden));
   });
   outlineMenu.addEventListener('click', function (e) {
@@ -2023,6 +2029,21 @@
     toast('Removed tag from ' + count + ' note' + (count === 1 ? '' : 's'));
   }
 
+  /* ---------- help center ---------- */
+  function openHelp() { helpOverlay.hidden = false; }
+  function closeHelp() { helpOverlay.hidden = true; }
+  helpBtn.addEventListener('click', openHelp);
+  helpCloseBtn.addEventListener('click', closeHelp);
+  helpOverlay.addEventListener('click', function (e) { if (e.target === helpOverlay) closeHelp(); });
+  helpTabsEl.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-tab]') : null;
+    if (!b) return;
+    $$('#helpTabs button').forEach(function (x) { x.classList.toggle('active', x === b); });
+    $$('.help-pane', helpOverlay).forEach(function (p) {
+      p.classList.toggle('active', p.getAttribute('data-pane') === b.getAttribute('data-tab'));
+    });
+  });
+
   /* ---------------- boot ---------------- */
   function init() {
     $$('[data-icon]').forEach(function (el) {
@@ -2042,11 +2063,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '3') {
-      store.set(VER_KEY, '3');
+    if (ver !== '4') {
+      store.set(VER_KEY, '4');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.2 — focus mode, outline, GitHub sync & tag tools', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.3 — fixed the accent & outline buttons; press ? for the new built-in guide', { timeout: 6500 });
         }, 700);
       }
     }
