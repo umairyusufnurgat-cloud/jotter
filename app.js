@@ -99,7 +99,8 @@
     check: svg('<polyline points="20 6 9 17 4 12"/>', 16),
     play: svg('<polygon points="5 3 19 12 5 21 5 3"/>', 15),
     image: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>', 16),
-    clock: svg('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', 16)
+    clock: svg('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', 16),
+    chart: svg('<line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="9"/><path d="M2 20h20"/>', 16)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -155,6 +156,7 @@
   var toastMsg = $('#toastMsg'), toastAct = $('#toastAct');
   var wikiPopEl = $('#wikiPop'), streakBadge = $('#streakBadge');
   var settingsBtn = $('#settingsBtn'), settingsOverlay = $('#settingsOverlay'), settingsCloseBtn = $('#settingsCloseBtn');
+  var statsBtn = $('#statsBtn'), statsOverlay = $('#statsOverlay'), statsCloseBtn = $('#statsCloseBtn'), statsBody = $('#statsBody');
   var syncTokenInput = $('#syncTokenInput'), syncSaveBtn = $('#syncSaveBtn'), syncStatus = $('#syncStatus');
   var syncNowBtn = $('#syncNowBtn'), syncAutoChk = $('#syncAutoChk'), syncDisconnectBtn = $('#syncDisconnectBtn'), aboutInfo = $('#aboutInfo');
   var promptOverlay = $('#promptOverlay'), promptTitle = $('#promptTitle'), promptInput = $('#promptInput');
@@ -1381,6 +1383,7 @@
     else if (e.key === 'Escape') {
       if (!ctxMenu.hidden) ctxMenu.hidden = true;
       else if (!promptOverlay.hidden) closePrompt();
+      else if (!statsOverlay.hidden) closeStats();
       else if (!settingsOverlay.hidden) closeSettings();
       else if (!helpOverlay.hidden) closeHelp();
       else if (!cmdkOverlay.hidden) closePalette();
@@ -1712,6 +1715,7 @@
     A('Help & guide', '?', ICONS.help, openHelp);
     if (sync.token) A('Sync notes now', '', ICONS.cloud, function () { syncNow(false); });
     A('Backup notes (JSON)', '', ICONS.download, function () { exportBackup(); });
+    A('Notebook insights', '', ICONS.chart, function () { openStats(); });
     A('Export all notes as Markdown', '', ICONS.fileText, function () { exportAllMd(); });
     A('Restore JSON backup', '', ICONS.upload, function () { importFile.click(); });
     A('Import Markdown files', '', ICONS.fileText, function () { importMdFile.click(); });
@@ -2027,7 +2031,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.4 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.5 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2221,6 +2225,144 @@
     toast('Removed tag from ' + count + ' note' + (count === 1 ? '' : 's'));
   }
 
+  /* ---------- notebook insights ---------- */
+  function noteWords(n) { return (String(n.body || '').trim().match(/\S+/g) || []).length; }
+  function truncTxt(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '\u2026' : s; }
+  function kbFmt(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : (n / 1024).toFixed(1) + ' KB'; }
+
+  function buildStats() {
+    var live = notes.filter(function (n) { return !n.deleted; });
+    var trashed = notes.length - live.length;
+    var words = 0, chars = 0, withImages = 0, tags = {}, i, d;
+    live.forEach(function (n) {
+      words += noteWords(n);
+      chars += String(n.body || '').length;
+      if (String(n.body || '').indexOf('data:image') !== -1) withImages++;
+      n.tags.forEach(function (t) { tags[t] = (tags[t] || 0) + 1; });
+    });
+    var streak = journalStreak();
+    var localBytes = JSON.stringify(notes).length;
+
+    /* last 14 days of activity (created or last edited) */
+    var days = [], dmax = 1;
+    var start = new Date(); start.setHours(0, 0, 0, 0);
+    for (i = 13; i >= 0; i--) {
+      d = new Date(start); d.setDate(d.getDate() - i);
+      var dEnd = new Date(d); dEnd.setDate(dEnd.getDate() + 1);
+      var c = live.filter(function (n) {
+        var t = Math.max(n.createdAt || 0, n.updatedAt || 0);
+        return t >= d.getTime() && t < dEnd.getTime();
+      }).length;
+      if (c > dmax) dmax = c;
+      days.push({
+        label: d.toLocaleDateString([], { weekday: 'narrow' }),
+        title: d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }),
+        count: c
+      });
+    }
+
+    /* notes created per month, last 6 months */
+    var months = [], mmax = 1;
+    for (i = 5; i >= 0; i--) {
+      var m = new Date(start.getFullYear(), start.getMonth() - i, 1);
+      var mNext = new Date(start.getFullYear(), start.getMonth() - i + 1, 1);
+      var mc = live.filter(function (n) { var t = n.createdAt || 0; return t >= m.getTime() && t < mNext.getTime(); }).length;
+      if (mc > mmax) mmax = mc;
+      months.push({ label: m.toLocaleDateString([], { month: 'short' }), count: mc });
+    }
+
+    function bars(arr, max) {
+      return arr.map(function (b, idx) {
+        var pct = b.count ? Math.max(8, Math.round(b.count / max * 100)) : 3;
+        var t = (b.title ? b.title + ' \u2014 ' : '') + b.count + ' note' + (b.count === 1 ? '' : 's');
+        return '<div class="bar' + (idx === arr.length - 1 ? ' hot' : '') + '" title="' + escapeHtml(t) + '"><i style="height:' + pct + '%"></i></div>';
+      }).join('');
+    }
+    function labels(arr) {
+      return arr.map(function (b) { return '<span>' + escapeHtml(b.label) + '</span>'; }).join('');
+    }
+
+    var hero = [
+      ['Notes', live.length.toLocaleString()],
+      ['Words written', words.toLocaleString()],
+      ['\uD83D\uDD25 Journal streak', streak > 0 ? streak + (streak === 1 ? ' day' : ' days') : '\u2014'],
+      ['Tags in use', Object.keys(tags).length.toLocaleString()]
+    ];
+
+    var top = Object.keys(tags).sort(function (a, b) { return tags[b] - tags[a] || a.localeCompare(b); }).slice(0, 8);
+    var tagHtml = top.length
+      ? '<div class="stat-tags">' + top.map(function (t) {
+          return '<span class="stat-tag">' + escapeHtml(t) + ' <b>' + tags[t] + '</b></span>';
+        }).join('') + '</div>'
+      : '<p class="stat-hint">No tags yet \u2014 add them with the tag chips above the editor.</p>';
+
+    var oldest = null, longest = null;
+    live.forEach(function (n) {
+      if (!oldest || (n.createdAt || 0) < (oldest.createdAt || 0)) oldest = n;
+      if (!longest || noteWords(n) > noteWords(longest)) longest = n;
+    });
+    var recs = [
+      ['Longest note', longest ? truncTxt(longest.title || 'Untitled', 34) + ' \u00B7 ' + noteWords(longest).toLocaleString() + ' words' : '\u2014'],
+      ['Average length', live.length ? Math.round(words / live.length).toLocaleString() + ' words per note' : '\u2014'],
+      ['Oldest note', oldest ? new Date(oldest.createdAt || Date.now()).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) + ' \u00B7 ' + truncTxt(oldest.title || 'Untitled', 30) : '\u2014'],
+      ['In trash', trashed ? trashed + ' note' + (trashed === 1 ? '' : 's') + ' (auto-deleted after 30 days)' : 'Empty \u2713']
+    ];
+
+    return (
+      '<section class="set-sec"><div class="stat-cards">' +
+        hero.map(function (h) { return '<div class="stat-card"><b>' + h[1] + '</b><span>' + escapeHtml(h[0]) + '</span></div>'; }).join('') +
+      '</section>' +
+      '<section class="set-sec"><h3>\uD83D\uDCCD Last 14 days</h3>' +
+        '<div class="stat-chart">' + bars(days, dmax) + '</div>' +
+        '<div class="stat-labels">' + labels(days) + '</div>' +
+      '</section>' +
+      '<section class="set-sec"><h3>\uD83D\uDCC8 Notes created \u00B7 last 6 months</h3>' +
+        '<div class="stat-chart">' + bars(months, mmax) + '</div>' +
+        '<div class="stat-labels">' + labels(months) + '</div>' +
+      '</section>' +
+      '<section class="set-sec"><h3>\uD83C\uDFF7\uFE0F Top tags</h3>' + tagHtml + '</section>' +
+      '<section class="set-sec"><h3>\uD83C\uDFC5 Records</h3>' +
+        '<div class="stat-rows">' + recs.map(function (r) {
+          return '<div class="stat-row"><span>' + r[0] + '</span><b>' + escapeHtml(r[1]) + '</b></div>';
+        }).join('') + '</div>' +
+      '</section>' +
+      '<section class="set-sec"><h3>\uD83D\uDDC4\uFE0F Storage</h3>' +
+        '<div class="stat-bar"><i id="storeEstimateBar" style="width:0%"></i></div>' +
+        '<p class="stat-hint" id="storeEstimate">Checking browser storage\u2026</p>' +
+        '<p class="stat-hint">Notes stored in this browser: ' + kbFmt(localBytes) +
+        (withImages ? ' \u00B7 ' + withImages + ' note' + (withImages === 1 ? '' : 's') + ' contain embedded images' : '') + '</p>' +
+      '</section>'
+    );
+  }
+
+  function fillStorageEstimate() {
+    var el = document.getElementById('storeEstimate');
+    var bar = document.getElementById('storeEstimateBar');
+    if (!el) return;
+    if (!(navigator.storage && navigator.storage.estimate)) {
+      el.textContent = 'This browser does not report storage usage.';
+      return;
+    }
+    navigator.storage.estimate().then(function (est) {
+      var used = est.usage || 0, quota = est.quota || 0;
+      var pct = quota ? used / quota * 100 : 0;
+      if (bar) bar.style.width = Math.min(100, pct).toFixed(1) + '%';
+      el.textContent = 'Browser storage: ' + kbFmt(used) + ' used of about ' + kbFmt(quota) + ' available (' + pct.toFixed(pct < 1 ? 2 : 1) + '%)';
+    }).catch(function () {
+      el.textContent = 'Could not read storage usage in this browser.';
+    });
+  }
+
+  function openStats() {
+    statsBody.innerHTML = buildStats();
+    statsOverlay.hidden = false;
+    fillStorageEstimate();
+  }
+  function closeStats() { statsOverlay.hidden = true; }
+  statsBtn.addEventListener('click', openStats);
+  statsCloseBtn.addEventListener('click', closeStats);
+  statsOverlay.addEventListener('click', function (e) { if (e.target === statsOverlay) closeStats(); });
+
   /* ---------- help center ---------- */
   function openHelp() { helpOverlay.hidden = false; }
   function closeHelp() { helpOverlay.hidden = true; }
@@ -2255,11 +2397,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '5') {
-      store.set(VER_KEY, '5');
+    if (ver !== '6') {
+      store.set(VER_KEY, '6');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.4 \u2014 image paste, timestamps & a Markdown playground template (New note \u25BE)', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.5 \u2014 Notebook insights (\uD83D\uDCCA in the sidebar) & a Backup-menu fix', { timeout: 6500 });
         }, 700);
       }
     }

@@ -35,6 +35,7 @@
             </div>
           </div>
           <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+          <button class="icon-btn" id="statsBtn" data-icon="chart" title="Notebook insights" aria-label="Notebook insights"></button>
           <button class="icon-btn" id="settingsBtn" data-icon="sliders" title="Settings & sync" aria-label="Settings and sync"></button>
           <button class="icon-btn" id="helpBtn" data-icon="help" title="Help & guide (?)" aria-label="Help and guide"></button>
         </div>
@@ -251,6 +252,17 @@
     </div>
   </div>
 
+  <!-- ======================= INSIGHTS MODAL ======================= -->
+  <div class="modal-overlay" id="statsOverlay" hidden>
+    <div class="modal stats-modal" role="dialog" aria-modal="true" aria-label="Notebook insights">
+      <div class="modal-head">
+        <h2>Notebook insights</h2>
+        <button class="icon-btn" id="statsCloseBtn" data-icon="x" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="statsBody"></div>
+    </div>
+  </div>
+
   <!-- ======================= HELP MODAL ======================= -->
   <div class="modal-overlay" id="helpOverlay" hidden>
     <div class="modal help-modal" role="dialog" aria-modal="true" aria-label="Help and guide">
@@ -283,6 +295,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="cmd"></span><div class="bg-txt"><b>Command palette</b> &mdash; search notes &amp; run any action (<kbd>Ctrl</kbd>+<kbd>K</kbd>)</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="droplet"></span><div class="bg-txt"><b>Accent colour</b> &mdash; pick from six accent colours</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="sun"></span><div class="bg-txt"><b>Theme</b> &mdash; switch between light and dark</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="chart"></span><div class="bg-txt"><b>Insights</b> &mdash; your notebook in numbers: words, streaks, activity charts, top tags and storage</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="sliders"></span><div class="bg-txt"><b>Settings &amp; sync</b> &mdash; GitHub sync setup and storage info</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="help"></span><div class="bg-txt"><b>Help &amp; guide</b> &mdash; the guide you are reading (<kbd>?</kbd>)</div></div>
 
@@ -319,7 +332,14 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.4 <span class="pill">current</span></h4>
+            <h4>v1.5 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128202; <b>Notebook insights</b> &mdash; the new &#128202; button in the sidebar (or <kbd>Ctrl</kbd>+<kbd>K</kbd>) shows your totals, &#128293; journaling streak, 14-day activity, monthly creation chart, top tags, records and storage use</li>
+              <li>&#128230; Fixed the <b>Backup &#9662;</b> menu opening partly off the left edge of the screen</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.4 &mdash; playground &amp; images</h4>
             <ul>
               <li>&#127918; <b>Markdown playground</b> template &mdash; New note &#9662; &rarr; a live, editable example of every feature (formatting, tasks, tables, wiki-links, images, timestamps&hellip;)</li>
               <li>&#128444; <b>Paste screenshots</b> into notes with <kbd>Ctrl</kbd>+<kbd>V</kbd> (auto-resized, stored locally), or drag image files in</li>

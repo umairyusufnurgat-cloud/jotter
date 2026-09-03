@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5 — insights & Backup-menu fix
+
+- 🐛 **Fixed the Backup menu** opening partly off the left edge of the screen — footer menus now anchor to the full footer row, so they can never clip
+- 📊 **Notebook insights** — new 📊 button in the sidebar (also via `Ctrl`+`K`): total notes & words written, 🔥 journaling streak, a 14-day activity chart, notes-created-per-month chart, top tags, records (longest/oldest/average), and storage usage with a live browser-storage bar
+
 ## v1.4 — playground & images
 
 - 🎓 **Markdown playground template** — *New note ▾ → Markdown playground* creates a live, editable note demonstrating every single feature: text formatting, escapes, headings, clickable task lists, nested lists, quotes, code blocks, tables with alignment, wiki-links (real and dashed), embedded images, and timestamps — plus a checklist of things to try

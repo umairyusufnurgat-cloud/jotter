@@ -29,6 +29,7 @@
 - 🧩 **Templates** — Markdown playground (a live tour of every feature), Today's journal, Meeting notes, Reading notes, Project plan, Brain dump
 - 🖼 **Images in notes** — paste screenshots with `Ctrl`/`⌘`+`V` or drag image files in; they're auto-resized and stored locally
 - ⏱ **Timestamps** — `Ctrl`/`⌘`+`;` drops in the current date & time
+- 📊 **Notebook insights** — words written, journaling streak, activity charts, top tags and storage usage
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags — with match highlighting
