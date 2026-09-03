@@ -38,6 +38,7 @@
 - 🔒 **PIN-locked notes** — encrypt any note's text with a PIN (AES-256-GCM via your browser's built-in crypto); it stays encrypted in storage, backups and sync, unlocking only per tab when you enter the PIN (More ▾ → Lock note)
 - 🔍 **Find in note** — `Ctrl`/`⌘`+`F` highlights every match in the preview and jumps between them
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
+- 📁 **Folders** — file notes into folders (More ▾ → Move to folder, or drag a card onto one); click a folder in the sidebar to filter; new notes land in the folder you're browsing
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags — with match highlighting
 - 📅 **Today's journal** — one click creates a dated daily entry with a journal template (and a 🔥 streak counter)

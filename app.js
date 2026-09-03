@@ -109,7 +109,9 @@
     chevUp: svg('<polyline points="6 15 12 9 18 15"/>', 16),
     lock: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 16),
     lockS: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 13),
-    lockBig: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 30)
+    lockBig: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 30),
+    folder: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', 16),
+    folderS: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', 13)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -144,7 +146,7 @@
   /* ---------------- state ---------------- */
   var notes = [];
   var settings = { theme: null, sort: 'updated', view: 'split', lastId: null, accent: 'indigo', sideWidth: 302, sideCollapsed: false };
-  var ui = { activeId: null, search: '', tag: null, trash: false, cal: false, calMonth: new Date(), calDay: null };
+  var ui = { activeId: null, search: '', tag: null, folder: null, trash: false, cal: false, calMonth: new Date(), calDay: null };
   var dirty = false;
   var purgeArm = { id: null, t: null };
   var wikiPop = { open: false, items: [], sel: 0, startIdx: 0, caret: 0 };
@@ -180,6 +182,10 @@
   var lockScreen = $('#lockScreen'), lockPinInput = $('#lockPinInput'), lockUnlockBtn = $('#lockUnlockBtn'), lockErr = $('#lockErr');
   var setLockOverlay = $('#setLockOverlay'), setLockCloseBtn = $('#setLockCloseBtn'), setLockCancelBtn = $('#setLockCancelBtn');
   var setLockGoBtn = $('#setLockGoBtn'), setLockPin = $('#setLockPin'), setLockPin2 = $('#setLockPin2'), lockNoteBtn = $('#lockNoteBtn');
+  var moveBtn = $('#moveBtn');
+  var foldersSec = $('#foldersSec'), foldersHead = $('#foldersHead'), foldersList = $('#foldersList');
+  var folderOverlay = $('#folderOverlay'), folderCloseBtn = $('#folderCloseBtn'), folderPick = $('#folderPick');
+  var newFolderInput = $('#newFolderInput'), newFolderBtn = $('#newFolderBtn'), folderNoteHint = $('#folderNoteHint'), sbFolder = $('#sbFolder');
   var syncTokenInput = $('#syncTokenInput'), syncSaveBtn = $('#syncSaveBtn'), syncStatus = $('#syncStatus');
   var syncNowBtn = $('#syncNowBtn'), syncAutoChk = $('#syncAutoChk'), syncDisconnectBtn = $('#syncDisconnectBtn'), aboutInfo = $('#aboutInfo');
   var promptOverlay = $('#promptOverlay'), promptTitle = $('#promptTitle'), promptInput = $('#promptInput');
@@ -221,6 +227,7 @@
       updatedAt: +raw.updatedAt || +raw.createdAt || Date.now(),
       deleted: !!raw.deleted,
       deletedAt: +raw.deletedAt || null,
+      folder: typeof raw.folder === 'string' ? raw.folder.trim().slice(0, 60) : '',
       locked: !!(raw.locked && validEnc(raw.enc)),
       enc: (raw.locked && validEnc(raw.enc)) ? { v: 1, iv: String(raw.enc.iv), salt: String(raw.enc.salt), ct: String(raw.enc.ct) } : null,
       history: (Array.isArray(raw.history) ? raw.history : []).filter(function (h) {
@@ -394,6 +401,7 @@
       });
     }
     if (!ui.trash && ui.tag) list = list.filter(function (n) { return n.tags.indexOf(ui.tag) !== -1; });
+    if (!ui.trash && ui.folder) list = list.filter(function (n) { return n.folder === ui.folder; });
 
     if (ui.trash) {
       return list.sort(function (a, b) { return (b.deletedAt || 0) - (a.deletedAt || 0); });
@@ -446,6 +454,7 @@
     sideMeta.hidden = calView;
     tagFilters.hidden = calView;
     notesList.hidden = calView;
+    renderFolders(); // handles trash/cal hiding itself
     if (calView) renderCalendar();
     else { renderTagFilters(); renderNotesList(); }
   }
@@ -487,6 +496,7 @@
       (n.starred ? '<span class="ico-star" title="Starred">' + ICONS.starS + '</span>' : '');
     var snip = snippet(n);
     var date = fmtDate(ui.trash ? (n.deletedAt || n.updatedAt) : n.updatedAt);
+    var folderChip = (!ui.trash && n.folder) ? '<span class="nc-folder" title="Folder: ' + escapeHtml(n.folder) + '">' + ICONS.folderS + escapeHtml(n.folder) + '</span>' : '';
     var tags = n.tags.slice(0, 4).map(function (t) {
       return '<span class="mini-tag">' + escapeHtml(t) + '</span>';
     }).join('');
@@ -500,11 +510,12 @@
         '</div>';
     }
     return '<div class="note-card' + (active ? ' active' : '') + (ui.trash ? ' trashed' : '') + '" data-id="' + n.id +
+      (ui.trash ? '' : ' draggable="true"') +
       '" role="button" tabindex="0" aria-label="' + escapeHtml(title) + '">' +
       '<div class="nc-top"><span class="nc-title">' + hi(title) + '</span>' +
       (icons ? '<span class="nc-icons">' + icons + '</span>' : '') + '</div>' +
       (snip ? '<div class="nc-snippet">' + hi(snip) + '</div>' : '') +
-      '<div class="nc-meta"><span>' + date + '</span>' +
+      '<div class="nc-meta">' + folderChip + '<span>' + date + '</span>' +
       (tags ? '<span class="nc-tags">' + tags + '</span>' : '') + '</div>' +
       actions + '</div>';
   }
@@ -513,7 +524,7 @@
     var list = visibleNotes();
     if (!list.length) {
       var msg = ui.trash ? 'Trash is empty.<br>Deleted notes rest here for 30 days.'
-        : (ui.search.trim() || ui.tag) ? 'No notes match your filters.'
+        : (ui.search.trim() || ui.tag || ui.folder) ? (ui.folder && !ui.search.trim() && !ui.tag ? 'No notes in this folder yet.<br>Create one — it lands right here.' : 'No notes match your filters.')
         : 'No notes yet — create your first one!';
       notesList.innerHTML = '<div class="list-empty">' + ICONS.search + '<p>' + msg + '</p></div>';
       return;
@@ -522,7 +533,7 @@
   }
 
   function updateEmptyState() {
-    var filtering = ui.search.trim() || ui.tag;
+    var filtering = ui.search.trim() || ui.tag || ui.folder;
     if (ui.trash) {
       emptyTitle.textContent = 'Trash is empty';
       emptyText.textContent = 'Notes you delete rest here for 30 days before being removed forever.';
@@ -530,7 +541,7 @@
       clearFiltersBtn.hidden = true;
     } else if (filtering) {
       emptyTitle.textContent = 'Nothing found';
-      var what = (ui.tag ? '#' + ui.tag : '') + (ui.search.trim() ? ' \u201C' + ui.search.trim() + '\u201D' : '');
+      var what = (ui.folder ? '\uD83D\uDCC1 ' + ui.folder : '') + (ui.tag ? (ui.folder ? ' · ' : '') + '#' + ui.tag : '') + (ui.search.trim() ? ' \u201C' + ui.search.trim() + '\u201D' : '');
       emptyText.textContent = 'No notes match ' + what.trim() + '.';
       emptyNewBtn.hidden = emptyDailyBtn.hidden = true;
       clearFiltersBtn.hidden = false;
@@ -554,6 +565,8 @@
     lockScreen.hidden = !showLock;
     editor.classList.toggle('locked', showLock);
     editorArea.value = sess ? sess.text : (n.locked ? '' : n.body);
+    sbFolder.innerHTML = n.folder ? ICONS.folderS + escapeHtml(n.folder) : '';
+    sbFolder.hidden = !n.folder;
     updateNoteMenu();
     var ro = !!n.deleted;
     titleInput.readOnly = ro;
@@ -661,6 +674,7 @@
       updatedAt: now,
       deleted: false,
       deletedAt: null,
+      folder: opts.folder !== undefined ? String(opts.folder).slice(0, 60) : (ui.folder && !ui.trash && !ui.cal ? ui.folder : ''),
       locked: false,
       enc: null,
       history: []
@@ -1214,6 +1228,7 @@
   clearFiltersBtn.addEventListener('click', function () {
     ui.search = '';
     ui.tag = null;
+    ui.folder = null;
     searchInput.value = '';
     renderSidebar();
     if (!getNote(ui.activeId)) renderEditor();
@@ -1338,6 +1353,7 @@
       if (n.locked) b = '> \uD83D\uDD12 This note is locked; its content is encrypted.';
       else if (b.slice(0, head.length).toLowerCase() !== head.toLowerCase()) b = head + '\n\n' + b;
       if (n.tags.length) b += '\n\n*Tags: ' + n.tags.join(', ') + '*';
+      if (n.folder) b = '*Folder: ' + n.folder + '*\n\n' + b;
       return b + '\n\n---\n\n';
     });
     download('jotter-notes-' + new Date().toISOString().slice(0, 10) + '.md', parts.join(''), 'text/markdown');
@@ -1516,6 +1532,7 @@
       if (!ctxMenu.hidden) ctxMenu.hidden = true;
       else if (!findBar.hidden) closeFind();
       else if (!setLockOverlay.hidden) closeSetLock();
+      else if (!folderOverlay.hidden) closeFolderPicker();
       else if (!promptOverlay.hidden) closePrompt();
       else if (!histOverlay.hidden) closeHist();
       else if (!statsOverlay.hidden) closeStats();
@@ -1860,6 +1877,7 @@
       else if (n.locked) toast('Enter the PIN on the note\u2019s lock screen');
       else openSetLock();
     });
+    A('Move to folder…', '', ICONS.folder, function () { openFolderPicker(); });
     A('Version history', '', ICONS.undo, function () { openHist(); });
     A('Share note as link', '', ICONS.link, function () { shareNoteLink(); });
     A('Toggle sidebar', 'Ctrl \\', ICONS.panelLeft, function () { toggleSidebar(); });
@@ -1907,6 +1925,16 @@
     var acts = buildActions().filter(function (a) {
       return !q || a.label.toLowerCase().indexOf(q) !== -1;
     });
+    var folderItems = [];
+    if (!ui.trash) {
+      Object.keys(folderCounts()).sort(function (a, b) { return a.localeCompare(b); }).slice(0, 6).forEach(function (f) {
+        if (!q || f.toLowerCase().indexOf(q) !== -1) {
+          folderItems.push({ type: 'action', label: f, sub: 'Go to folder', icon: ICONS.folderS, run: function () {
+            ui.folder = f; ui.trash = false; ui.cal = false; renderAll();
+          } });
+        }
+      });
+    }
     var items = [];
     if (noteItems.length) {
       if (!q) items.push({ type: 'sep', label: 'Recent notes' });
@@ -1915,6 +1943,10 @@
     if (acts.length) {
       if (!q) items.push({ type: 'sep', label: 'Actions' });
       items = items.concat(acts);
+    }
+    if (folderItems.length) {
+      if (!q) items.push({ type: 'sep', label: 'Folders' });
+      items = items.concat(folderItems);
     }
     return items.slice(0, 16);
   }
@@ -2179,7 +2211,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.10 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.11 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2310,8 +2342,10 @@
   /* ---------- tag tools (rename / delete everywhere) ---------- */
   var ctxTarget = null;
   var ctxArmed = false;
+  var ctxKind = 'tag'; // 'tag' | 'folder'
   function showCtx(tag, x, y) {
     ctxTarget = tag;
+    ctxKind = 'tag';
     ctxArmed = false;
     ctxMenu.innerHTML =
       '<button id="ctxRename">' + ICONS.pencil + '<span>Rename \u201C' + escapeHtml(tag) + '\u201D\u2026</span></button>' +
@@ -2331,12 +2365,21 @@
     if (r) {
       ctxMenu.hidden = true;
       var tag = ctxTarget;
-      openPromptModal('Rename tag', tag, 'Rename', function (v) { renameTag(tag, v); });
+      if (ctxKind === 'folder') {
+        openPromptModal('Rename folder', tag, 'Rename', function (v) { renameFolder(tag, v); });
+      } else {
+        openPromptModal('Rename tag', tag, 'Rename', function (v) { renameTag(tag, v); });
+      }
       return;
     }
     var d = e.target.closest ? e.target.closest('#ctxDelete') : null;
     if (d) {
-      if (ctxArmed) { ctxMenu.hidden = true; deleteTagEverywhere(ctxTarget); return; }
+      if (ctxArmed) {
+        ctxMenu.hidden = true;
+        if (ctxKind === 'folder') deleteFolder(ctxTarget);
+        else deleteTagEverywhere(ctxTarget);
+        return;
+      }
       ctxArmed = true;
       d.classList.add('armed');
       d.innerHTML = '<span>Really delete \u201C' + escapeHtml(ctxTarget) + '\u201D everywhere?</span>';
@@ -2373,6 +2416,179 @@
     persist(); renderAll();
     toast('Removed tag from ' + count + ' note' + (count === 1 ? '' : 's'));
   }
+
+  /* ---------- folders ---------- */
+  var foldersOpen = true;
+  function folderCounts() {
+    var counts = {};
+    notes.forEach(function (n) {
+      if (n.deleted || !n.folder) return;
+      counts[n.folder] = (counts[n.folder] || 0) + 1;
+    });
+    return counts;
+  }
+  function folderNames() {
+    var counts = folderCounts();
+    var names = Object.keys(counts);
+    if (ui.folder && names.indexOf(ui.folder) === -1) names.unshift(ui.folder); // keep active visible even at 0
+    return names.sort(function (a, b) { return a.localeCompare(b); });
+  }
+  function renderFolders() {
+    var hide = ui.trash || ui.cal;
+    var names = hide ? [] : folderNames();
+    foldersSec.hidden = hide || names.length === 0;
+    if (foldersSec.hidden) return;
+    foldersSec.classList.toggle('folded', !foldersOpen);
+    foldersHead.setAttribute('aria-expanded', String(foldersOpen));
+    foldersList.hidden = !foldersOpen;
+    var counts = folderCounts();
+    var html = '';
+    if (ui.folder) {
+      html += '<button class="folder-row all" data-folder="">'
+        + '<span class="fr-ico">' + ICONS.folderS + '</span><span class="fr-name">All notes</span></button>';
+    }
+    html += names.map(function (f) {
+      var active = ui.folder === f;
+      return '<button class="folder-row' + (active ? ' active' : '') + '" data-folder="' + escapeHtml(f) + '">'
+        + '<span class="fr-ico">' + ICONS.folderS + '</span><span class="fr-name">' + escapeHtml(f) + '</span>'
+        + '<span class="fr-count">' + (counts[f] || 0) + '</span></button>';
+    }).join('');
+    foldersList.innerHTML = html;
+  }
+  foldersHead.addEventListener('click', function () {
+    foldersOpen = !foldersOpen;
+    renderFolders();
+  });
+  foldersList.addEventListener('click', function (e) {
+    var row = e.target.closest ? e.target.closest('[data-folder]') : null;
+    if (!row) return;
+    var f = row.getAttribute('data-folder');
+    ui.folder = f ? (ui.folder === f ? null : f) : null; // '' row = All notes → clear
+    renderAll();
+  });
+  foldersList.addEventListener('contextmenu', function (e) {
+    var row = e.target.closest ? e.target.closest('[data-folder]') : null;
+    if (!row || !row.getAttribute('data-folder')) return;
+    e.preventDefault();
+    showCtxFolder(row.getAttribute('data-folder'), e.clientX, e.clientY);
+  });
+
+  function moveToFolder(n, name) {
+    if (!n) return;
+    name = String(name || '').trim().slice(0, 60);
+    if (n.folder === name) { closeFolderPicker(); return; }
+    n.folder = name;
+    n.updatedAt = Date.now();
+    persist(); renderAll();
+    closeFolderPicker();
+    toast(name ? 'Moved to \u201C' + name + '\u201D' : 'Removed from folder');
+  }
+  function openFolderPicker() {
+    var n = getNote(ui.activeId);
+    if (!n || n.deleted) return;
+    folderNoteHint.textContent = '\u201C' + (n.title || 'Untitled') + '\u201D' + (n.folder ? ' is currently in \u201C' + n.folder + '\u201D' : ' is not in a folder yet');
+    renderFolderPick();
+    newFolderInput.value = '';
+    folderOverlay.hidden = false;
+    setTimeout(function () { newFolderInput.focus(); }, 0);
+  }
+  function closeFolderPicker() { folderOverlay.hidden = true; }
+  function renderFolderPick() {
+    var n = getNote(ui.activeId);
+    if (!n) return;
+    var counts = folderCounts();
+    var names = Object.keys(counts).sort(function (a, b) { return a.localeCompare(b); });
+    var html = '<button class="folder-opt' + (n.folder ? '' : ' cur') + '" data-f="">'
+      + '<span class="fr-ico">' + ICONS.folderS + '</span><span class="fr-name">No folder</span>'
+      + (n.folder ? '' : '<span class="fr-tick" data-icon="check"></span>') + '</button>';
+    html += names.map(function (f) {
+      return '<button class="folder-opt' + (n.folder === f ? ' cur' : '') + '" data-f="' + escapeHtml(f) + '">'
+        + '<span class="fr-ico">' + ICONS.folderS + '</span><span class="fr-name">' + escapeHtml(f) + '</span>'
+        + '<span class="fr-count">' + counts[f] + '</span>'
+        + (n.folder === f ? '<span class="fr-tick" data-icon="check"></span>' : '')
+        + '</button>';
+    }).join('');
+    folderPick.innerHTML = html;
+    folderPick.querySelectorAll('[data-f]').forEach(function (b) {
+      b.addEventListener('click', function () { moveToFolder(getNote(ui.activeId), b.getAttribute('data-f')); });
+    });
+    // late icon injection for dynamically built rows
+    folderPick.querySelectorAll('[data-icon]').forEach(function (el) {
+      var ic = ICONS[el.getAttribute('data-icon')];
+      if (ic && !el.firstChild) el.insertAdjacentHTML('afterbegin', ic);
+    });
+  }
+  newFolderBtn.addEventListener('click', function () {
+    var name = newFolderInput.value.replace(/[\\\/]/g, '').trim().slice(0, 60);
+    if (!name) { toast('Type a folder name first'); newFolderInput.focus(); return; }
+    moveToFolder(getNote(ui.activeId), name);
+  });
+  newFolderInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); newFolderBtn.click(); }
+  });
+  folderCloseBtn.addEventListener('click', closeFolderPicker);
+  folderOverlay.addEventListener('click', function (e) { if (e.target === folderOverlay) closeFolderPicker(); });
+  moveBtn.addEventListener('click', function () { noteMenu.hidden = true; openFolderPicker(); });
+
+  function renameFolder(oldF, newF) {
+    newF = String(newF || '').replace(/[\\\/]/g, '').trim().slice(0, 60);
+    if (!newF || newF === oldF) return;
+    var count = 0;
+    notes.forEach(function (n) {
+      if (n.folder === oldF) { n.folder = newF; n.updatedAt = Date.now(); count++; }
+    });
+    if (ui.folder === oldF) ui.folder = newF;
+    persist(); renderAll();
+    toast(count ? 'Renamed folder on ' + count + ' note' + (count === 1 ? '' : 's') : 'Folder renamed');
+  }
+  function deleteFolder(f) {
+    var count = 0;
+    notes.forEach(function (n) {
+      if (n.folder === f) { n.folder = ''; n.updatedAt = Date.now(); count++; }
+    });
+    if (ui.folder === f) ui.folder = null;
+    persist(); renderAll();
+    toast('Unfiled ' + count + ' note' + (count === 1 ? '' : 's') + ' \u2014 nothing was deleted');
+  }
+  function showCtxFolder(f, x, y) {
+    ctxTarget = f;
+    ctxKind = 'folder';
+    ctxArmed = false;
+    ctxMenu.innerHTML =
+      '<button id="ctxRename">' + ICONS.pencil + '<span>Rename \u201C' + escapeHtml(f) + '\u201D\u2026</span></button>' +
+      '<button id="ctxDelete" class="danger">' + ICONS.trashS + '<span>Delete folder (keep notes)</span></button>';
+    ctxMenu.style.left = Math.max(8, Math.min(x, window.innerWidth - 240)) + 'px';
+    ctxMenu.style.top = Math.max(8, Math.min(y, window.innerHeight - 130)) + 'px';
+    ctxMenu.hidden = false;
+  }
+
+  /* drag note cards onto folder rows (desktop) */
+  notesList.addEventListener('dragstart', function (e) {
+    var card = e.target.closest ? e.target.closest('.note-card') : null;
+    if (!card || ui.trash) { e.preventDefault(); return; }
+    e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  foldersList.addEventListener('dragover', function (e) {
+    var row = e.target.closest ? e.target.closest('[data-folder]') : null;
+    if (!row) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    row.classList.add('drag-over');
+  });
+  foldersList.addEventListener('dragleave', function (e) {
+    var row = e.target.closest ? e.target.closest('[data-folder]') : null;
+    if (row) row.classList.remove('drag-over');
+  });
+  foldersList.addEventListener('drop', function (e) {
+    var row = e.target.closest ? e.target.closest('[data-folder]') : null;
+    if (!row) return;
+    e.preventDefault();
+    row.classList.remove('drag-over');
+    var id = e.dataTransfer.getData('text/plain');
+    var n = getNote(id);
+    if (n && !n.deleted) moveToFolder(n, row.getAttribute('data-folder'));
+  });
 
   /* ---------- PIN-locked notes (AES-256-GCM via Web Crypto) ---------- */
   var hasCrypto = !!(window.crypto && window.crypto.subtle && window.crypto.subtle.encrypt);
@@ -2517,6 +2733,7 @@
     lockNoteBtn.hidden = !can || lockedNoSess;
     var span = lockNoteBtn.querySelector('span');
     if (span) span.textContent = (n && n.locked) ? 'Lock now' : 'Lock note';
+    moveBtn.hidden = !(n && !n.deleted);
   }
   lockNoteBtn.addEventListener('click', function () {
     noteMenu.hidden = true;
@@ -3245,11 +3462,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '11') {
-      store.set(VER_KEY, '11');
+    if (ver !== '12') {
+      store.set(VER_KEY, '12');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.10 \u2014 PIN-locked notes: encrypt any note end-to-end from the More menu', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.11 \u2014 folders: group notes, drag cards onto folders, filter by folder', { timeout: 6500 });
         }, 700);
       }
     }

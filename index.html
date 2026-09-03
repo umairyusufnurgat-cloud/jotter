@@ -78,6 +78,14 @@
         </select>
       </div>
 
+      <div class="folders-sec" id="foldersSec" hidden>
+        <button class="folders-head" id="foldersHead" aria-expanded="true">
+          <span class="fh-ico" data-icon="folder"></span><span class="fh-label">Folders</span>
+          <span class="fh-chev" data-icon="chevDown"></span>
+        </button>
+        <div class="folders-list" id="foldersList"></div>
+      </div>
+
       <div class="cal-panel" id="calPanel" hidden>
         <div class="cal-head">
           <button class="icon-btn" id="calPrevBtn" data-icon="chevLeft" aria-label="Previous month"></button>
@@ -184,6 +192,7 @@
               <button id="dlMdBtn" data-icon="download"><span>Download .md</span></button>
               <button id="printMdBtn" data-icon="printer"><span>Print / save as PDF</span></button>
               <button id="lockNoteBtn" data-icon="lock"><span>Lock note</span></button>
+              <button id="moveBtn" data-icon="folder"><span>Move to folder…</span></button>
               <hr />
               <button id="trashCurrentBtn" class="danger" data-icon="trash"><span>Move to trash</span></button>
             </div>
@@ -217,6 +226,7 @@
         </div>
 
         <footer class="statusbar">
+          <span class="sb-folder" id="sbFolder" hidden></span>
           <span id="statsInfo">0 words · 0 characters</span>
           <span class="save-status" id="saveStatus">Saved</span>
         </footer>
@@ -332,6 +342,26 @@
     </div>
   </div>
 
+  <!-- ======================= MOVE TO FOLDER MODAL ======================= -->
+  <div class="modal-overlay" id="folderOverlay" hidden>
+    <div class="modal small" role="dialog" aria-modal="true" aria-label="Move to folder">
+      <div class="modal-head">
+        <h2>Move to folder</h2>
+        <button class="icon-btn" id="folderCloseBtn" data-icon="x" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <section class="set-sec">
+          <p class="set-desc" id="folderNoteHint"></p>
+          <div class="folder-pick" id="folderPick"></div>
+          <div class="folder-new">
+            <input type="text" id="newFolderInput" placeholder="New folder name…" maxlength="60" autocomplete="off" aria-label="New folder name" />
+            <button class="btn small primary" id="newFolderBtn"><span>Create &amp; move</span></button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
   <!-- ======================= NOTE GRAPH MODAL ======================= -->
   <div class="modal-overlay" id="graphOverlay" hidden>
     <div class="modal graph-modal" role="dialog" aria-modal="true" aria-label="Note graph">
@@ -415,6 +445,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="calendar"></span><div class="bg-txt"><b>Today&rsquo;s journal</b> &mdash; dated entry with a journal template; the &#128293; streak appears after 2+ days in a row</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="search"></span><div class="bg-txt"><b>Search</b> &mdash; live search across titles, text and tags (<kbd>/</kbd>); matches are highlighted</div></div>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tag chips</b> &mdash; click to filter by a tag; <b>right-click</b> to rename it or remove it from all notes</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; file notes into folders (More &#9662; &rarr; Move to folder, or drag a card onto one); click to filter, right-click to rename or delete</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days)</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="panelLeft"></span><div class="bg-txt"><b>Resize / hide sidebar</b> &mdash; drag the sidebar&rsquo;s right edge to resize it; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or use the &#9776; toolbar button to hide it entirely</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="graph"></span><div class="bg-txt"><b>Note graph</b> &mdash; your notes as a map of [[wiki-links]]; drag, zoom and pan it, click a bubble to open the note</div></div>
@@ -430,7 +461,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="pin"></span><div class="bg-txt"><b>Pin</b> &mdash; keep this note at the top of the list</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Download</b> &mdash; save this note as a <code>.md</code> file</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="printer"></span><div class="bg-txt"><b>Print</b> &mdash; print or save as PDF with clean print styles</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, browse version history, share it as a link, download or print it, <b>lock it with a PIN</b>, or move it to trash</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, browse version history, share it as a link, download or print it, <b>lock it with a PIN</b>, <b>move it to a folder</b>, or move it to trash</div></div>
 
           <h4>In the editor</h4>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tags</b> &mdash; type a name and press <kbd>&#8629;</kbd>; click &times; on a chip to remove it</div></div>
@@ -445,7 +476,16 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.10 <span class="pill">current</span></h4>
+            <h4>v1.11 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128193; <b>Folders</b> &mdash; group your notes into folders: assign them from <b>More &#9662; &rarr; Move to folder</b> (or the command palette), then browse and filter in the new <b>Folders</b> section of the sidebar. On desktop you can even <b>drag note cards onto a folder</b> to file them</li>
+              <li>&#128269; Click a folder to see only its notes (with search and tags still working on top); new notes you create while inside a folder land in it automatically</li>
+              <li>&#9999;&#65039; Right-click a folder in the sidebar to rename it everywhere or delete it (notes are kept, just unfiled)</li>
+              <li>&#128230; Folders travel with sync, backups and the JSON export; locked notes can be filed too &mdash; folders are metadata, not content</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.10 &mdash; PIN-locked notes</h4>
             <ul>
               <li>&#128274; <b>PIN-locked notes</b> &mdash; More &#9662; &rarr; Lock note encrypts the text with a PIN (AES-256-GCM, via your browser&rsquo;s built-in crypto). Locked notes stay encrypted at rest &mdash; in this browser, in backups and in sync &mdash; and unlock per tab when you enter the PIN. Titles and tags stay visible so you can still find them</li>
               <li>&#128273; <b>Accounts: the design is out</b> &mdash; see Settings &rarr; About for the roadmap (ACCOUNTS.md); today&rsquo;s GitHub sync remains your private cloud</li>

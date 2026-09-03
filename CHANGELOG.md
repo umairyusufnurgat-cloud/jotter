@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.11 — folders 📁
+
+- 📁 **Folders** — file notes into folders to keep a growing notebook tidy: **More ▾ → Move to folder…** (or `Ctrl`+`K`) opens a picker with your folders, a "create & move" field, and a one-click *No folder* option. Folders appear in a collapsible **Folders** section at the top of the sidebar with live counts
+- 🖱 **Drag notes into folders** (desktop) — grab any note card and drop it onto a folder row; dropping on *All notes* unfiles it
+- 🔍 **Filter by folder** — click a folder to see only its notes; search and tag filters keep working on top, and the empty state tells you what's active. New notes created while inside a folder land in that folder automatically
+- ✏️ **Right-click a folder** to rename it everywhere or delete it — deleting only unfiles the notes, nothing is lost
+- 🏷️ Note cards and the editor statusbar show the note's folder; the Markdown export notes each note's folder; folders travel with sync, backups and JSON restore (and locked notes can be filed too — a folder is metadata, not content)
+
 ## v1.10 — PIN-locked notes 🔐
 
 - 🔒 **Lock any note with a PIN** — *More ▾ → Lock note* encrypts the note's text with a PIN using your browser's built-in crypto (**AES-256-GCM**, key derived via **PBKDF2**, 150,000 rounds, fresh salt & IV every time). The encrypted ciphertext — never plaintext — is what gets stored in the browser, in backups and in sync. Zero dependencies: it's the Web Crypto API all the way down
