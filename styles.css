@@ -1321,3 +1321,69 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
   .toolbar { padding: 6px 8px; gap: 3px; }
   .segmented button { padding: 5px 7px; font-size: 11px; }
 }
+
+/* ============================================================
+   v1.10 — PIN-locked notes: lock screen inside the editor,
+   lock badges, and a taller-proof More menu
+   ============================================================ */
+.editor.locked .panes,
+.editor.locked .statusbar { display: none !important; }
+
+/* sits in normal flow between doc-head and (hidden) panes, so the title
+   and tags of a locked note stay visible and editable above it */
+.lock-screen {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  padding: 28px 20px;
+}
+.lock-screen[hidden] { display: none; }
+.lock-box {
+  width: min(400px, 100%);
+  text-align: center;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  padding: 30px 26px 24px;
+}
+.lock-art { color: var(--accent); display: flex; justify-content: center; margin-bottom: 10px; }
+.lock-box h3 { margin: 0 0 8px; font-size: 18px; }
+.lock-box p { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0 0 14px; }
+.lock-box input {
+  width: 100%; box-sizing: border-box;
+  font-size: 16px; /* stops iOS zoom-on-focus */
+  padding: 9px 12px; margin-bottom: 10px;
+  border: 1px solid var(--border-strong); border-radius: 9px;
+  background: var(--bg); color: var(--text); outline: none;
+  text-align: center; letter-spacing: 0.12em;
+}
+.lock-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.lock-box .btn { width: 100%; }
+.lock-err { color: var(--danger) !important; font-weight: 600; margin-bottom: 10px !important; }
+.lock-fine { font-size: 11.5px !important; opacity: 0.85; margin-top: 16px !important; }
+
+/* 🔒 badge on note cards */
+.ico-lock { display: inline-flex; color: var(--text-muted); margin-right: 1px; }
+.ico-lock svg { display: block; }
+
+/* set-lock modal */
+#setLockOverlay .set-row { margin: 8px 0; }
+#setLockOverlay input {
+  width: 100%; box-sizing: border-box;
+  font-size: 16px; /* stops iOS zoom-on-focus */
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong); border-radius: 9px;
+  background: var(--bg); color: var(--text); outline: none;
+}
+#setLockOverlay input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.lock-warn { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text);
+  border-radius: 9px; padding: 9px 12px; margin: 12px 0 4px !important; }
+
+/* the More menu now has more items than some viewports are tall */
+.menu { max-height: calc(100vh - 90px); overflow-y: auto; }
+
+@media (max-width: 640px) {
+  .lock-screen { padding: 16px 12px; }
+  .lock-box { padding: 22px 18px 18px; }
+}

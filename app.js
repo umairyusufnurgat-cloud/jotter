@@ -106,7 +106,10 @@
     panelLeft: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/>', 16),
     link: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', 16),
     graph: svg('<circle cx="5" cy="6" r="3"/><circle cx="19" cy="6" r="3"/><circle cx="12" cy="19" r="3"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="7.2" y1="8.2" x2="10.5" y2="16.6"/><line x1="16.8" y1="8.2" x2="13.5" y2="16.6"/>', 16),
-    chevUp: svg('<polyline points="6 15 12 9 18 15"/>', 16)
+    chevUp: svg('<polyline points="6 15 12 9 18 15"/>', 16),
+    lock: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 16),
+    lockS: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 13),
+    lockBig: svg('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 30)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -174,6 +177,9 @@
   var findBar = $('#findBar'), findInput = $('#findInput'), findCount = $('#findCount');
   var findPrevBtn = $('#findPrevBtn'), findNextBtn = $('#findNextBtn'), findCloseBtn = $('#findCloseBtn');
   var dlMdBtn = $('#dlMdBtn'), printMdBtn = $('#printMdBtn');
+  var lockScreen = $('#lockScreen'), lockPinInput = $('#lockPinInput'), lockUnlockBtn = $('#lockUnlockBtn'), lockErr = $('#lockErr');
+  var setLockOverlay = $('#setLockOverlay'), setLockCloseBtn = $('#setLockCloseBtn'), setLockCancelBtn = $('#setLockCancelBtn');
+  var setLockGoBtn = $('#setLockGoBtn'), setLockPin = $('#setLockPin'), setLockPin2 = $('#setLockPin2'), lockNoteBtn = $('#lockNoteBtn');
   var syncTokenInput = $('#syncTokenInput'), syncSaveBtn = $('#syncSaveBtn'), syncStatus = $('#syncStatus');
   var syncNowBtn = $('#syncNowBtn'), syncAutoChk = $('#syncAutoChk'), syncDisconnectBtn = $('#syncDisconnectBtn'), aboutInfo = $('#aboutInfo');
   var promptOverlay = $('#promptOverlay'), promptTitle = $('#promptTitle'), promptInput = $('#promptInput');
@@ -215,6 +221,8 @@
       updatedAt: +raw.updatedAt || +raw.createdAt || Date.now(),
       deleted: !!raw.deleted,
       deletedAt: +raw.deletedAt || null,
+      locked: !!(raw.locked && validEnc(raw.enc)),
+      enc: (raw.locked && validEnc(raw.enc)) ? { v: 1, iv: String(raw.enc.iv), salt: String(raw.enc.salt), ct: String(raw.enc.ct) } : null,
       history: (Array.isArray(raw.history) ? raw.history : []).filter(function (h) {
         return h && typeof h === 'object' && typeof h.body === 'string' && +h.ts;
       }).map(function (h) {
@@ -474,6 +482,7 @@
     var active = n.id === ui.activeId;
     var title = n.title || 'Untitled';
     var icons =
+      (n.locked ? '<span class="ico-lock" title="Locked with a PIN">' + ICONS.lockS + '</span>' : '') +
       (n.pinned ? '<span class="ico-pin" title="Pinned">' + ICONS.pinS + '</span>' : '') +
       (n.starred ? '<span class="ico-star" title="Starred">' + ICONS.starS + '</span>' : '');
     var snip = snippet(n);
@@ -540,7 +549,12 @@
     if (!n) { updateEmptyState(); return; }
 
     titleInput.value = n.title;
-    editorArea.value = n.body;
+    var sess = n.locked ? unlockSess[n.id] : null;
+    var showLock = !!(n.locked && !sess);
+    lockScreen.hidden = !showLock;
+    editor.classList.toggle('locked', showLock);
+    editorArea.value = sess ? sess.text : (n.locked ? '' : n.body);
+    updateNoteMenu();
     var ro = !!n.deleted;
     titleInput.readOnly = ro;
     editorArea.readOnly = ro;
@@ -578,6 +592,11 @@
   }
 
   function renderPreview() {
+    var n = getNote(ui.activeId);
+    if (n && n.locked && !unlockSess[n.id]) {
+      previewArea.innerHTML = '<p class="placeholder-line">\uD83D\uDD12 This note is locked — unlock it to read and edit.</p>';
+      return;
+    }
     var val = editorArea.value || '';
     previewArea.innerHTML = window.JotterMD
       ? window.JotterMD.render(val)
@@ -642,6 +661,8 @@
       updatedAt: now,
       deleted: false,
       deletedAt: null,
+      locked: false,
+      enc: null,
       history: []
     };
     notes.unshift(note);
@@ -736,14 +757,15 @@
     if (!n) return;
     var copy = normalizeNote(JSON.parse(JSON.stringify({
       id: uid(), title: (n.title || 'Untitled') + ' (copy)', body: n.body, tags: n.tags.slice(),
-      pinned: false, starred: n.starred, createdAt: Date.now(), updatedAt: Date.now(), deleted: false, deletedAt: null
+      pinned: false, starred: n.starred, createdAt: Date.now(), updatedAt: Date.now(), deleted: false, deletedAt: null,
+      locked: n.locked, enc: n.locked && n.enc ? JSON.parse(JSON.stringify(n.enc)) : null
     })));
     notes.unshift(copy);
     persist();
     ui.activeId = copy.id;
     ui.trash = false;
     renderAll();
-    toast('Note duplicated');
+    toast(n.locked ? 'Note duplicated \u2014 still locked with the same PIN' : 'Note duplicated');
   }
 
   function dailyTitle() {
@@ -776,9 +798,17 @@
     var n = getNote(ui.activeId);
     if (!n) { dirty = false; return; }
     n.title = titleInput.value.slice(0, 200);
-    n.body = editorArea.value;
     n.updatedAt = Date.now();
-    pushHistory(n);
+    if (n.locked) {
+      if (unlockSess[n.id]) {
+        unlockSess[n.id].text = editorArea.value; // plaintext only in memory
+        queueRelock(n.id); // re-encrypt to storage shortly
+      }
+      // no session → note is showing its lock screen; body stays encrypted/empty
+    } else {
+      n.body = editorArea.value;
+      pushHistory(n);
+    }
     persist();
     dirty = false;
     saveStatus.textContent = 'Saved ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -814,13 +844,20 @@
     var n = getNote(ui.activeId);
     if (!n || n.deleted) return;
     var lineIdx = parseInt(cb.getAttribute('data-task'), 10);
-    var lines = n.body.split('\n');
+    var sess = n.locked ? unlockSess[n.id] : null;
+    var src = sess ? sess.text : n.body;
+    var lines = src.split('\n');
     if (lines[lineIdx] == null) return;
     lines[lineIdx] = cb.checked
       ? lines[lineIdx].replace(/^(\s*[-*+]\s+\[)([ xX])(\])/, '$1x$3')
       : lines[lineIdx].replace(/^(\s*[-*+]\s+\[)([ xX])(\])/, '$1 $3');
-    n.body = lines.join('\n');
-    editorArea.value = n.body;
+    if (sess) {
+      sess.text = lines.join('\n');
+      queueRelock(n.id);
+    } else {
+      n.body = lines.join('\n');
+    }
+    editorArea.value = sess ? sess.text : n.body;
     n.updatedAt = Date.now();
     persist();
     var st = previewArea.scrollTop;
@@ -1072,15 +1109,21 @@
   function downloadCurrentNote() {
     var n = getNote(ui.activeId);
     if (!n) return;
-    download(slug(n.title) + '.md', (n.title ? '# ' + n.title + '\n\n' : '') + n.body, 'text/markdown');
+    if (n.locked && !unlockSess[n.id]) { toast('Unlock the note first'); return; }
+    var body = n.locked ? unlockSess[n.id].text : n.body;
+    download(slug(n.title) + '.md', (n.title ? '# ' + n.title + '\n\n' : '') + body, 'text/markdown');
   }
   downloadNoteBtn.addEventListener('click', function () {
     noteMenu.hidden = true;
     downloadCurrentNote();
   });
-  printBtn.addEventListener('click', function () { window.print(); });
+  printBtn.addEventListener('click', function () { if (isLockedActive()) { toast('Unlock the note first'); return; } window.print(); });
   dlMdBtn.addEventListener('click', function () { noteMenu.hidden = true; downloadCurrentNote(); });
-  printMdBtn.addEventListener('click', function () { noteMenu.hidden = true; window.print(); });
+  printMdBtn.addEventListener('click', function () {
+    noteMenu.hidden = true;
+    if (isLockedActive()) { toast('Unlock the note first'); return; }
+    window.print();
+  });
 
   /* trash banner */
   restoreBtn.addEventListener('click', function () { if (ui.activeId) restoreNote(ui.activeId); });
@@ -1292,7 +1335,8 @@
     var parts = list.map(function (n) {
       var head = '# ' + (n.title || 'Untitled');
       var b = String(n.body || '');
-      if (b.slice(0, head.length).toLowerCase() !== head.toLowerCase()) b = head + '\n\n' + b;
+      if (n.locked) b = '> \uD83D\uDD12 This note is locked; its content is encrypted.';
+      else if (b.slice(0, head.length).toLowerCase() !== head.toLowerCase()) b = head + '\n\n' + b;
       if (n.tags.length) b += '\n\n*Tags: ' + n.tags.join(', ') + '*';
       return b + '\n\n---\n\n';
     });
@@ -1402,7 +1446,8 @@
   function copyMarkdown() {
     var n = getNote(ui.activeId);
     if (!n) return;
-    var text = (n.title ? '# ' + n.title + '\n\n' : '') + n.body;
+    if (n.locked && !unlockSess[n.id]) { toast('Unlock the note first'); return; }
+    var text = (n.title ? '# ' + n.title + '\n\n' : '') + (n.locked ? unlockSess[n.id].text : n.body);
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(
         function () { toast('Markdown copied to clipboard'); },
@@ -1470,6 +1515,7 @@
     else if (e.key === 'Escape') {
       if (!ctxMenu.hidden) ctxMenu.hidden = true;
       else if (!findBar.hidden) closeFind();
+      else if (!setLockOverlay.hidden) closeSetLock();
       else if (!promptOverlay.hidden) closePrompt();
       else if (!histOverlay.hidden) closeHist();
       else if (!statsOverlay.hidden) closeStats();
@@ -1807,6 +1853,13 @@
     A('Notebook insights', '', ICONS.chart, function () { openStats(); });
     A('Note graph', '', ICONS.graph, function () { openGraph(); });
     A('Find in note', 'Ctrl F', ICONS.search, function () { openFind(); });
+    A('Lock / unlock note', '', ICONS.lock, function () {
+      var n = getNote(ui.activeId);
+      if (!n || n.deleted || !hasCrypto) { toast('Open a note first'); return; }
+      if (n.locked && unlockSess[n.id]) relockNote(n.id);
+      else if (n.locked) toast('Enter the PIN on the note\u2019s lock screen');
+      else openSetLock();
+    });
     A('Version history', '', ICONS.undo, function () { openHist(); });
     A('Share note as link', '', ICONS.link, function () { shareNoteLink(); });
     A('Toggle sidebar', 'Ctrl \\', ICONS.panelLeft, function () { toggleSidebar(); });
@@ -2126,7 +2179,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.9 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.10 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2245,6 +2298,7 @@
 
   /* ---------- zen / focus mode ---------- */
   function toggleZen() {
+    if (isLockedActive()) { toast('Unlock the note first'); return; }
     document.body.classList.toggle('zen');
     if (!document.body.classList.contains('zen')) return;
     if (!getNote(ui.activeId)) createNote();
@@ -2320,12 +2374,165 @@
     toast('Removed tag from ' + count + ' note' + (count === 1 ? '' : 's'));
   }
 
+  /* ---------- PIN-locked notes (AES-256-GCM via Web Crypto) ---------- */
+  var hasCrypto = !!(window.crypto && window.crypto.subtle && window.crypto.subtle.encrypt);
+  var unlockSess = {}; // noteId -> { text, key, salt } — plaintext lives ONLY here, never in storage
+  var relockQueue = {}, relockTimer = null;
+
+  function u8ToB64(u8) {
+    var s = '';
+    for (var i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+    return btoa(s);
+  }
+  function b64ToU8(b64) {
+    var s = atob(b64), u = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+    return u;
+  }
+  function validEnc(e) {
+    return !!(e && typeof e === 'object' && typeof e.ct === 'string' && typeof e.iv === 'string' && typeof e.salt === 'string' &&
+      e.ct.length > 0 && e.iv.length > 0 && e.salt.length > 0);
+  }
+  function deriveKey(pin, saltU8) {
+    return crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']).then(function (km) {
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: saltU8, iterations: 150000, hash: 'SHA-256' }, km,
+        { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    });
+  }
+  function encryptWithKey(key, text, saltB64) {
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(text)).then(function (ct) {
+      return { v: 1, iv: u8ToB64(iv), salt: saltB64, ct: u8ToB64(new Uint8Array(ct)) };
+    });
+  }
+  function encryptBody(pin, text) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    return deriveKey(pin, salt).then(function (key) {
+      return encryptWithKey(key, text, u8ToB64(salt));
+    });
+  }
+  function tryUnlockNote(n, pin) {
+    return deriveKey(pin, b64ToU8(n.enc.salt)).then(function (key) {
+      return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToU8(n.enc.iv) }, key, b64ToU8(n.enc.ct)).then(function (pt) {
+        return { text: new TextDecoder().decode(pt), key: key, salt: n.enc.salt };
+      }, function () { return null; }); // wrong PIN → GCM auth failure
+    });
+  }
+  function queueRelock(id) {
+    // keep localStorage encrypted and fresh: re-encrypt shortly after typing stops
+    relockQueue[id] = true;
+    clearTimeout(relockTimer);
+    relockTimer = setTimeout(flushRelocks, 700);
+  }
+  function flushRelocks() {
+    var ids = Object.keys(relockQueue);
+    relockQueue = {};
+    var chain = Promise.resolve();
+    ids.forEach(function (id) {
+      chain = chain.then(function () {
+        var n = getNote(id), sess = unlockSess[id];
+        if (!n || !n.locked || !sess || !n.enc) return;
+        return encryptWithKey(sess.key, sess.text, sess.salt).then(function (enc) {
+          n.enc = enc;
+        });
+      });
+    });
+    chain.then(function () { if (ids.length) persist(); }).catch(function () { /* keep session; retry on next edit */ });
+  }
+  function relockNote(id) {
+    var n = getNote(id), sess = unlockSess[id];
+    if (!n || !sess || !n.locked) return;
+    encryptWithKey(sess.key, sess.text, sess.salt).then(function (enc) {
+      n.enc = enc;
+      n.body = '';
+      n.updatedAt = Date.now();
+      delete unlockSess[id];
+      persist();
+      renderAll();
+      toast('\uD83D\uDD12 Note locked');
+    }, function () { toast('\u26A0\uFE0F Could not re-lock the note'); });
+  }
+
+  function isLockedActive() {
+    var n = getNote(ui.activeId);
+    return !!(n && n.locked && !unlockSess[n.id]);
+  }
+
+  function openSetLock() {
+    var n = getNote(ui.activeId);
+    if (!n || n.deleted || n.locked) return;
+    if (!hasCrypto) { toast('Locking needs a secure (https) context'); return; }
+    setLockPin.value = ''; setLockPin2.value = '';
+    setLockOverlay.hidden = false;
+    setTimeout(function () { setLockPin.focus(); }, 0);
+  }
+  function closeSetLock() { setLockOverlay.hidden = true; }
+  function doSetLock() {
+    var n = getNote(ui.activeId);
+    if (!n || n.locked) return;
+    var pin = setLockPin.value, pin2 = setLockPin2.value;
+    if (pin.length < 4) { toast('The PIN needs at least 4 characters'); setLockPin.focus(); return; }
+    if (pin !== pin2) { toast('The PINs don\u2019t match'); setLockPin2.focus(); return; }
+    var text = editorArea.value;
+    encryptBody(pin, text).then(function (enc) {
+      n.locked = true;
+      n.enc = enc;
+      n.body = '';
+      n.history = []; // never keep plaintext snapshots of a locked note
+      persist();
+      closeSetLock();
+      renderAll();
+      toast('\uD83D\uDD12 Note locked \u2014 keep that PIN safe, it cannot be reset');
+    }, function () { toast('\u26A0\uFE0F Encryption failed in this browser'); });
+  }
+  setLockGoBtn.addEventListener('click', doSetLock);
+  setLockCloseBtn.addEventListener('click', closeSetLock);
+  setLockCancelBtn.addEventListener('click', closeSetLock);
+  setLockOverlay.addEventListener('click', function (e) { if (e.target === setLockOverlay) closeSetLock(); });
+  [setLockPin, setLockPin2].forEach(function (el) {
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doSetLock(); } });
+  });
+
+  function doUnlock() {
+    var n = getNote(ui.activeId);
+    if (!n || !n.locked || unlockSess[n.id]) return;
+    var pin = lockPinInput.value;
+    if (!pin) return;
+    lockErr.hidden = true;
+    tryUnlockNote(n, pin).then(function (sess) {
+      if (!sess) { lockErr.hidden = false; lockPinInput.select(); return; }
+      unlockSess[n.id] = sess;
+      persist(); // updatedAt etc. harmless; body stays ''
+      renderAll();
+      toast('\uD83D\uDD13 Unlocked for this tab \u2014 it re-locks on reload');
+    }, function () { toast('\u26A0\uFE0F Could not unlock in this browser'); });
+  }
+  lockUnlockBtn.addEventListener('click', doUnlock);
+  lockPinInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doUnlock(); } });
+
+  function updateNoteMenu() {
+    var n = getNote(ui.activeId);
+    var can = !!(n && !n.deleted && hasCrypto);
+    var lockedNoSess = !!(n && n.locked && !unlockSess[n.id]);
+    lockNoteBtn.hidden = !can || lockedNoSess;
+    var span = lockNoteBtn.querySelector('span');
+    if (span) span.textContent = (n && n.locked) ? 'Lock now' : 'Lock note';
+  }
+  lockNoteBtn.addEventListener('click', function () {
+    noteMenu.hidden = true;
+    var n = getNote(ui.activeId);
+    if (!n) return;
+    if (n.locked) relockNote(n.id);
+    else openSetLock();
+  });
+
   /* ---------- version history ---------- */
   var HIST_MAX_PER = 10, HIST_BYTE_CAP = 1572864; // ~1.5 MB of snapshots in total
   var histNoteId = null, histSelTs = 0;
 
   function pushHistory(n, force) {
     if (!n) return;
+    if (n.locked) return; // never snapshot plaintext of a locked note
     var now = Date.now();
     var last = n.history && n.history[0];
     if (!force && last && now - last.ts < 10 * 60000) return;   // at most one snapshot per ~10 min
@@ -2357,6 +2564,7 @@
   function openHist() {
     var n = getNote(ui.activeId);
     if (!n || n.deleted) { toast('Open a note first'); return; }
+    if (n.locked) { toast('Version history is paused for locked notes'); return; }
     histNoteId = n.id;
     histSelTs = 0;
     histOverlay.hidden = false;
@@ -2447,6 +2655,7 @@
   function shareNoteLink() {
     var n = getNote(ui.activeId);
     if (!n || n.deleted) { toast('Open a note first'); return; }
+    if (n.locked) { toast('Locked notes can\u2019t be shared as links'); return; }
     var url = location.origin + location.pathname + '#n=' + encodeShare(n);
     if (url.length > 30000) {
       toast('This note is too large to share as a link (embedded images?) — use Backup or Sync instead', { timeout: 6000 });
@@ -2735,6 +2944,7 @@
   function openFind() {
     var n = getNote(ui.activeId);
     if (!n || n.deleted) { toast('Open a note first'); return; }
+    if (n.locked && !unlockSess[n.id]) { toast('Unlock the note first'); return; }
     if (settings.view === 'edit') setView('split');
     findBar.hidden = false;
     findInput.focus();
@@ -3035,11 +3245,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '10') {
-      store.set(VER_KEY, '10');
+    if (ver !== '11') {
+      store.set(VER_KEY, '11');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.9 \u2014 mobile fix: the toolbar (and Move to trash) now fit properly on phones', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.10 \u2014 PIN-locked notes: encrypt any note end-to-end from the More menu', { timeout: 6500 });
         }, 700);
       }
     }

@@ -183,6 +183,7 @@
               <button id="shareBtn" data-icon="link"><span>Share as link</span></button>
               <button id="dlMdBtn" data-icon="download"><span>Download .md</span></button>
               <button id="printMdBtn" data-icon="printer"><span>Print / save as PDF</span></button>
+              <button id="lockNoteBtn" data-icon="lock"><span>Lock note</span></button>
               <hr />
               <button id="trashCurrentBtn" class="danger" data-icon="trash"><span>Move to trash</span></button>
             </div>
@@ -194,6 +195,18 @@
           <div class="tags-editor" id="tagsEditor">
             <span class="chips" id="chips"></span>
             <input id="tagInput" placeholder="Add a tag…" aria-label="Add tag" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+
+        <div class="lock-screen" id="lockScreen" hidden>
+          <div class="lock-box">
+            <div class="lock-art" data-icon="lockBig"></div>
+            <h3>This note is locked</h3>
+            <p>Its text is encrypted (AES-256-GCM) with your PIN &mdash; in this browser, in backups and in sync. Enter the PIN to unlock it in this tab.</p>
+            <input id="lockPinInput" type="password" placeholder="PIN" autocomplete="off" inputmode="text" aria-label="PIN" />
+            <button class="btn primary" id="lockUnlockBtn"><span>Unlock</span></button>
+            <p class="lock-err" id="lockErr" hidden>&#9888;&#65039; Wrong PIN &mdash; try again.</p>
+            <p class="lock-fine">Forgot the PIN? The note cannot be recovered &mdash; that&rsquo;s the point of the lock.</p>
           </div>
         </div>
 
@@ -275,6 +288,7 @@
         <section class="set-sec">
           <h3>ℹ️ About</h3>
           <p class="set-desc" id="aboutInfo"></p>
+          <p class="set-desc">&#128273; <b>User accounts are on the roadmap</b> &mdash; the design and options are written up in <a href="https://github.com/umairyusufnurgat-cloud/jotter/blob/main/ACCOUNTS.md" target="_blank" rel="noopener noreferrer">ACCOUNTS.md</a> in the repo. Today, GitHub sync (above) already gives you a private, account-less cloud.</p>
         </section>
       </div>
     </div>
@@ -288,6 +302,33 @@
         <button class="icon-btn" id="statsCloseBtn" data-icon="x" aria-label="Close"></button>
       </div>
       <div class="modal-body" id="statsBody"></div>
+    </div>
+  </div>
+
+  <!-- ======================= SET LOCK MODAL ======================= -->
+  <div class="modal-overlay" id="setLockOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Lock note">
+      <div class="modal-head">
+        <h2>Lock this note</h2>
+        <button class="icon-btn" id="setLockCloseBtn" data-icon="x" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <section class="set-sec">
+          <p class="set-desc">
+            The note&rsquo;s text will be encrypted with a PIN using your browser&rsquo;s built-in crypto
+            (<b>AES-256-GCM</b>, key derived via <b>PBKDF2</b>, 150,000 rounds) and stored encrypted everywhere &mdash;
+            in this browser, in backups and in sync. The title and tags stay visible so you can still find it.
+          </p>
+          <div class="set-row"><input type="password" id="setLockPin" placeholder="Choose a PIN (4+ characters)" autocomplete="off" aria-label="Choose a PIN" /></div>
+          <div class="set-row"><input type="password" id="setLockPin2" placeholder="Repeat the PIN" autocomplete="off" aria-label="Repeat the PIN" /></div>
+          <p class="set-desc lock-warn">&#9888;&#65039; If you forget this PIN the note <b>cannot be recovered</b> &mdash; there is no reset, by design.</p>
+          <div class="set-actions">
+            <span class="spacer"></span>
+            <button class="btn small ghost" id="setLockCancelBtn"><span>Cancel</span></button>
+            <button class="btn small primary" id="setLockGoBtn" data-icon="lock"><span>Lock note</span></button>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 
@@ -389,7 +430,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="pin"></span><div class="bg-txt"><b>Pin</b> &mdash; keep this note at the top of the list</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Download</b> &mdash; save this note as a <code>.md</code> file</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="printer"></span><div class="bg-txt"><b>Print</b> &mdash; print or save as PDF with clean print styles</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, browse version history, share it as a link, download or print it, or move it to trash</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, browse version history, share it as a link, download or print it, <b>lock it with a PIN</b>, or move it to trash</div></div>
 
           <h4>In the editor</h4>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tags</b> &mdash; type a name and press <kbd>&#8629;</kbd>; click &times; on a chip to remove it</div></div>
@@ -404,7 +445,14 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.9 <span class="pill">current</span></h4>
+            <h4>v1.10 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128274; <b>PIN-locked notes</b> &mdash; More &#9662; &rarr; Lock note encrypts the text with a PIN (AES-256-GCM, via your browser&rsquo;s built-in crypto). Locked notes stay encrypted at rest &mdash; in this browser, in backups and in sync &mdash; and unlock per tab when you enter the PIN. Titles and tags stay visible so you can still find them</li>
+              <li>&#128273; <b>Accounts: the design is out</b> &mdash; see Settings &rarr; About for the roadmap (ACCOUNTS.md); today&rsquo;s GitHub sync remains your private cloud</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.9 &mdash; mobile layout fix</h4>
             <ul>
               <li>&#128241; <b>Fixed the mobile toolbar</b> &mdash; on phones the buttons were being squeezed together and <b>More &#9662; &rarr; Move to trash</b> was pushed to the edge. Everything now fits cleanly, and Download / Print moved into the More menu where there&rsquo;s room</li>
               <li>&#127822; Inputs no longer zoom the page on iPhone, and printing hides stray UI</li>

@@ -35,6 +35,7 @@
 - 🕰 **Version history** — automatic snapshots while you edit; preview and restore any of the last 10 versions (More ▾)
 - 🔗 **Share a note as a link** — the whole note rides inside the URL; opening it on any device saves a copy — no account, no server
 - 🕸 **Note graph** — see your notes as an interactive map of wiki-links: drag, zoom, pan, click a bubble to open the note
+- 🔒 **PIN-locked notes** — encrypt any note's text with a PIN (AES-256-GCM via your browser's built-in crypto); it stays encrypted in storage, backups and sync, unlocking only per tab when you enter the PIN (More ▾ → Lock note)
 - 🔍 **Find in note** — `Ctrl`/`⌘`+`F` highlights every match in the preview and jumps between them
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
@@ -58,7 +59,9 @@ Jotter is private by default — notes live in your browser. To carry them to ev
 2. In Jotter: sidebar → **⚙ Settings → Sync** → paste the token → **Save**
 3. **Sync now**, or flip on **Auto-sync** and forget about it
 
-Your notes are stored as a **secret gist** on your own account — unlisted, accessible only with your token. Edits merge with newest-wins per note, and deletions propagate via tombstones. (Secret ≠ encrypted: don't sync anything you wouldn't store on GitHub.)
+Your notes are stored as a **secret gist** on your own account — unlisted, accessible only with your token. Edits merge with newest-wins per note, and deletions propagate via tombstones. (Secret ≠ encrypted: don't sync anything you wouldn't store on GitHub — or **lock** 🔒 those notes with a PIN first, so only their ciphertext travels.)
+
+> 🔑 Real user accounts are on the roadmap — the options and trade-offs are written up in [ACCOUNTS.md](ACCOUNTS.md).
 
 ## 🔗 Link your notes (wiki-links)
 

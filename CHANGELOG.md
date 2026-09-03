@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.10 — PIN-locked notes 🔐
+
+- 🔒 **Lock any note with a PIN** — *More ▾ → Lock note* encrypts the note's text with a PIN using your browser's built-in crypto (**AES-256-GCM**, key derived via **PBKDF2**, 150,000 rounds, fresh salt & IV every time). The encrypted ciphertext — never plaintext — is what gets stored in the browser, in backups and in sync. Zero dependencies: it's the Web Crypto API all the way down
+- 🔓 **Unlock per tab** — open a locked note and you get a lock screen; enter the PIN and the note works normally for that tab (edits are re-encrypted automatically a moment after you stop typing). Reload the page and it's locked again — the PIN is never stored anywhere
+- 🏷️ **Find-able but unreadable** — titles and tags stay visible so locked notes can still be searched-for, pinned, starred and organised; only the *body* is secret. Locked notes show a 🔒 badge on their card
+- ⚠️ **Honest by design** — the lock modal warns you upfront: forget the PIN and the note cannot be recovered, by anyone, ever. Version history is paused for locked notes (no plaintext snapshots), and locked notes refuse to be shared as links
+- 📄 Locked notes export as a clear placeholder line in full-notebook exports; downloading or copying a locked note's markdown asks you to unlock it first
+- 🔑 **Accounts: the thinking has started** — the design considerations for future user accounts are written up in [ACCOUNTS.md](ACCOUNTS.md) (nothing built yet — today GitHub sync remains your private cloud)
+- 🛡 Small hardening: the More menu can now scroll if a viewport is ever too short for it
+
 ## v1.9 — mobile layout fix
 
 - 📱 **Fixed the mobile toolbar** — on phones (≤640px) the editor toolbar needed ~460px in a 375px viewport, crushing the buttons and pushing **More ▾ → Move to trash** to the edge. The toolbar now compacts cleanly (smaller buttons and view switcher), and **Download .md / Print** moved into the More menu where there's room for them — nothing is lost, everything fits
