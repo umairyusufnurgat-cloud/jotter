@@ -67,12 +67,23 @@
         <kbd>/</kbd>
       </label>
 
-      <div class="side-meta">
+      <div class="side-meta" id="sideMeta">
         <select id="sortSelect" aria-label="Sort notes">
           <option value="updated">Recently updated</option>
           <option value="created">Newest first</option>
           <option value="title">Title A–Z</option>
         </select>
+      </div>
+
+      <div class="cal-panel" id="calPanel" hidden>
+        <div class="cal-head">
+          <button class="icon-btn" id="calPrevBtn" data-icon="chevLeft" aria-label="Previous month"></button>
+          <b id="calTitle"></b>
+          <button class="link-btn" id="calTodayBtn"><span>Today</span></button>
+          <button class="icon-btn" id="calNextBtn" data-icon="chevRight" aria-label="Next month"></button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-daybox" id="calDay"></div>
       </div>
 
       <div class="tag-filters" id="tagFilters"></div>
@@ -82,6 +93,7 @@
       <div class="side-bottom">
         <div class="seg">
           <button class="seg-btn" id="notesViewBtn" data-icon="file"><span>Notes</span></button>
+          <button class="seg-btn" id="calViewBtn" data-icon="calendar"><span>Calendar</span></button>
           <button class="seg-btn" id="trashViewBtn" data-icon="trash">
             <span>Trash</span><span class="count" id="trashCount" hidden></span>
           </button>
@@ -105,6 +117,7 @@
         <button class="link-btn danger block" id="emptyTrashBtn" hidden>Empty trash</button>
         <div class="storage-note" id="storageNote"></div>
       </div>
+      <div class="side-resizer" id="sideResizer" title="Drag to resize — double-click to hide"></div>
     </aside>
     <div class="overlay" id="overlay" hidden></div>
 
@@ -132,7 +145,7 @@
         </div>
 
         <header class="toolbar">
-          <button class="icon-btn mobile-only" id="sidebarToggle" data-icon="menu" aria-label="Open sidebar"></button>
+          <button class="icon-btn" id="sidebarToggle" data-icon="menu" title="Hide sidebar (Ctrl+\)" aria-label="Toggle sidebar"></button>
           <div class="segmented" id="viewSeg" role="tablist" aria-label="View mode">
             <button data-view="edit" role="tab">Edit</button>
             <button data-view="split" role="tab">Split</button>
@@ -305,12 +318,13 @@
           <div class="bg-row"><span class="bg-ico" data-icon="calendar"></span><div class="bg-txt"><b>Today&rsquo;s journal</b> &mdash; dated entry with a journal template; the &#128293; streak appears after 2+ days in a row</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="search"></span><div class="bg-txt"><b>Search</b> &mdash; live search across titles, text and tags (<kbd>/</kbd>); matches are highlighted</div></div>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tag chips</b> &mdash; click to filter by a tag; <b>right-click</b> to rename it or remove it from all notes</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Trash</b> &mdash; switch between your notes and the trash (deleted notes rest 30 days)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="panelLeft"></span><div class="bg-txt"><b>Resize / hide sidebar</b> &mdash; drag the sidebar&rsquo;s right edge to resize it; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or use the &#9776; toolbar button to hide it entirely</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Backup &#9662;</b> &mdash; JSON backup of everything, or export all notes as one Markdown file</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="upload"></span><div class="bg-txt"><b>Import &#9662;</b> &mdash; restore a backup or import .md files; you can also just drag &amp; drop files onto the app</div></div>
 
           <h4>Editor toolbar</h4>
-          <div class="bg-row"><span class="bg-ico" data-icon="menu"></span><div class="bg-txt"><b>Open sidebar</b> &mdash; on mobile, slides the sidebar in</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="menu"></span><div class="bg-txt"><b>Sidebar toggle</b> &mdash; show or hide the notes sidebar (<kbd>Ctrl</kbd>+<kbd>\</kbd>); on mobile it slides the sidebar in</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="columns"></span><div class="bg-txt"><b>Edit / Split / Preview</b> &mdash; writing modes; Split shows the live-rendered result beside your text (<kbd>Ctrl</kbd>+<kbd>E</kbd> cycles)</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="listIcon"></span><div class="bg-txt"><b>Outline</b> &mdash; lists every heading in this note; click one to jump to it</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="maximize"></span><div class="bg-txt"><b>Focus mode</b> &mdash; hide everything but your writing (<kbd>Ctrl</kbd>+<kbd>.</kbd>, <kbd>Esc</kbd> exits)</div></div>
@@ -332,7 +346,15 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.5 <span class="pill">current</span></h4>
+            <h4>v1.6 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128207; <b>Resizable &amp; hideable sidebar</b> &mdash; drag its right edge to any width you like; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or click the &#9776; toolbar button to hide it and write full-width</li>
+              <li>&#128197; <b>Calendar view</b> &mdash; Notes &#9662; Calendar shows a month grid of your writing; click a day to see what you wrote or start that day&rsquo;s entry</li>
+              <li>&#128295; Fixed the accent-colour menu opening off the left edge of the screen, and the squeezed sidebar header</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.5 &mdash; insights &amp; Backup-menu fix</h4>
             <ul>
               <li>&#128202; <b>Notebook insights</b> &mdash; the new &#128202; button in the sidebar (or <kbd>Ctrl</kbd>+<kbd>K</kbd>) shows your totals, &#128293; journaling streak, 14-day activity, monthly creation chart, top tags, records and storage use</li>
               <li>&#128230; Fixed the <b>Backup &#9662;</b> menu opening partly off the left edge of the screen</li>

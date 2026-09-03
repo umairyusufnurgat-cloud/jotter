@@ -100,7 +100,10 @@
     play: svg('<polygon points="5 3 19 12 5 21 5 3"/>', 15),
     image: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>', 16),
     clock: svg('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', 16),
-    chart: svg('<line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="9"/><path d="M2 20h20"/>', 16)
+    chart: svg('<line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="9"/><path d="M2 20h20"/>', 16),
+    chevLeft: svg('<polyline points="15 18 9 12 15 6"/>', 16),
+    chevRight: svg('<polyline points="9 18 15 12 9 6"/>', 16),
+    panelLeft: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/>', 16)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -134,8 +137,8 @@
 
   /* ---------------- state ---------------- */
   var notes = [];
-  var settings = { theme: null, sort: 'updated', view: 'split', lastId: null, accent: 'indigo' };
-  var ui = { activeId: null, search: '', tag: null, trash: false };
+  var settings = { theme: null, sort: 'updated', view: 'split', lastId: null, accent: 'indigo', sideWidth: 302, sideCollapsed: false };
+  var ui = { activeId: null, search: '', tag: null, trash: false, cal: false, calMonth: new Date(), calDay: null };
   var dirty = false;
   var purgeArm = { id: null, t: null };
   var wikiPop = { open: false, items: [], sel: 0, startIdx: 0, caret: 0 };
@@ -146,6 +149,9 @@
   var notesList = $('#notesList'), tagFilters = $('#tagFilters'), searchInput = $('#searchInput'), sortSelect = $('#sortSelect');
   var newNoteBtn = $('#newNoteBtn'), dailyBtn = $('#dailyBtn'), themeBtn = $('#themeBtn');
   var notesViewBtn = $('#notesViewBtn'), trashViewBtn = $('#trashViewBtn'), trashCount = $('#trashCount');
+  var calViewBtn = $('#calViewBtn'), calPanel = $('#calPanel'), calPrevBtn = $('#calPrevBtn'), calNextBtn = $('#calNextBtn');
+  var calTodayBtn = $('#calTodayBtn'), calTitle = $('#calTitle'), calGrid = $('#calGrid'), calDayBox = $('#calDay');
+  var sideMeta = $('#sideMeta'), sideResizer = $('#sideResizer');
   var exportAllBtn = $('#expJsonBtn'), importBtn = $('#restoreJsonBtn'), importFile = $('#importFile'), importMdFile = $('#importMdFile');
   var backupBtn = $('#backupBtn'), backupMenu = $('#backupMenu'), expMdBtn = $('#expMdBtn');
   var impBtn = $('#impBtn'), impMenu = $('#impMenu'), importMdBtn = $('#importMdBtn');
@@ -400,7 +406,8 @@
 
   function renderSidebar() {
     sortSelect.value = settings.sort;
-    notesViewBtn.classList.toggle('active', !ui.trash);
+    notesViewBtn.classList.toggle('active', !ui.trash && !ui.cal);
+    calViewBtn.classList.toggle('active', ui.cal && !ui.trash);
     trashViewBtn.classList.toggle('active', ui.trash);
     var trashed = notes.filter(function (n) { return n.deleted; }).length;
     trashCount.textContent = trashed > 0 ? String(trashed) : '';
@@ -410,8 +417,13 @@
     streakBadge.hidden = streak < 2;
     if (streak >= 2) streakBadge.textContent = '\uD83D\uDD25 ' + streak;
     dailyBtn.title = streak >= 2 ? streak + '-day journaling streak' : 'Create today\u2019s journal entry';
-    renderTagFilters();
-    renderNotesList();
+    var calView = ui.cal && !ui.trash;
+    calPanel.hidden = !calView;
+    sideMeta.hidden = calView;
+    tagFilters.hidden = calView;
+    notesList.hidden = calView;
+    if (calView) renderCalendar();
+    else { renderTagFilters(); renderNotesList(); }
   }
 
   function renderTagFilters() {
@@ -1100,6 +1112,7 @@
 
   searchInput.addEventListener('input', function () {
     ui.search = searchInput.value;
+    if (ui.cal && !ui.trash) { ui.cal = false; renderAll(); return; }
     renderNotesList();
     if (!getNote(ui.activeId)) renderEditor();
   });
@@ -1111,8 +1124,9 @@
   });
 
   notesViewBtn.addEventListener('click', function () {
-    if (!ui.trash) return;
+    if (!ui.trash && !ui.cal) return;
     ui.trash = false;
+    ui.cal = false;
     var n = getNote(ui.activeId);
     if (!n || n.deleted) ui.activeId = null;
     renderAll();
@@ -1120,6 +1134,7 @@
   trashViewBtn.addEventListener('click', function () {
     if (ui.trash) return;
     ui.trash = true;
+    ui.cal = false;
     var n = getNote(ui.activeId);
     if (!n || !n.deleted) ui.activeId = null;
     renderAll();
@@ -1145,16 +1160,63 @@
     toast('Trash emptied');
   });
 
-  /* mobile sidebar */
+  /* mobile sidebar + desktop resize/collapse */
   function closeMobileSidebar() {
     sidebar.classList.remove('open');
     overlay.hidden = true;
   }
-  sidebarToggle.addEventListener('click', function () {
-    sidebar.classList.add('open');
-    overlay.hidden = false;
-  });
+  function isMobileLayout() { return window.innerWidth <= 900; }
+
+  function setSideWidth(w) {
+    w = Math.round(Math.max(SIDE_MIN, Math.min(SIDE_MAX, w)));
+    settings.sideWidth = w;
+    document.documentElement.style.setProperty('--side-w', w + 'px');
+  }
+  function updateSideNarrow() {
+    if (isMobileLayout()) { sidebar.classList.remove('narrow'); return; }
+    sidebar.classList.toggle('narrow', sidebar.clientWidth < 292);
+  }
+  function toggleSidebar() {
+    if (isMobileLayout()) {
+      if (sidebar.classList.contains('open')) closeMobileSidebar();
+      else { sidebar.classList.add('open'); overlay.hidden = false; }
+      return;
+    }
+    var on = document.body.classList.toggle('side-collapsed');
+    settings.sideCollapsed = on;
+    persistSettings();
+    sidebarToggle.title = on ? 'Show sidebar (Ctrl \\)' : 'Hide sidebar (Ctrl \\)';
+    document.body.classList.add('side-anim');
+    setTimeout(function () {
+      document.body.classList.remove('side-anim');
+      updateSideNarrow();
+    }, 240);
+  }
+  sidebarToggle.addEventListener('click', toggleSidebar);
   overlay.addEventListener('click', closeMobileSidebar);
+
+  sideResizer.addEventListener('pointerdown', function (e) {
+    if (isMobileLayout()) return;
+    e.preventDefault();
+    try { sideResizer.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
+    sideResizer.classList.add('active');
+    document.body.classList.add('resizing');
+  });
+  sideResizer.addEventListener('pointermove', function (e) {
+    if (!sideResizer.classList.contains('active')) return;
+    setSideWidth(e.clientX);
+    updateSideNarrow();
+  });
+  function endSideDrag() {
+    if (!sideResizer.classList.contains('active')) return;
+    sideResizer.classList.remove('active');
+    document.body.classList.remove('resizing');
+    persistSettings();
+  }
+  sideResizer.addEventListener('pointerup', endSideDrag);
+  sideResizer.addEventListener('pointercancel', endSideDrag);
+  sideResizer.addEventListener('dblclick', toggleSidebar);
+  window.addEventListener('resize', updateSideNarrow);
 
   /* theme */
   function applyTheme() {
@@ -1377,6 +1439,7 @@
     else if (mod && k === 'f') { e.preventDefault(); focusSearch(); }
     else if (mod && k === 's') { e.preventDefault(); saveActive(); toast('Saved'); }
     else if (mod && k === 'e') { e.preventDefault(); cycleView(); }
+    else if (mod && k === '\\') { e.preventDefault(); toggleSidebar(); }
     else if (k === '/' && !inField) { e.preventDefault(); focusSearch(); }
     else if (e.key === '?' && !inField) { e.preventDefault(); openHelp(); }
     else if (k === 'n' && !inField && !mod && !e.altKey) { createNote(); }
@@ -1716,6 +1779,8 @@
     if (sync.token) A('Sync notes now', '', ICONS.cloud, function () { syncNow(false); });
     A('Backup notes (JSON)', '', ICONS.download, function () { exportBackup(); });
     A('Notebook insights', '', ICONS.chart, function () { openStats(); });
+    A('Toggle sidebar', 'Ctrl \\', ICONS.panelLeft, function () { toggleSidebar(); });
+    A('Open calendar', '', ICONS.calendar, function () { ui.cal = true; ui.trash = false; renderAll(); closeMobileSidebar(); });
     A('Export all notes as Markdown', '', ICONS.fileText, function () { exportAllMd(); });
     A('Restore JSON backup', '', ICONS.upload, function () { importFile.click(); });
     A('Import Markdown files', '', ICONS.fileText, function () { importMdFile.click(); });
@@ -2031,7 +2096,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.5 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.6 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2363,6 +2428,106 @@
   statsCloseBtn.addEventListener('click', closeStats);
   statsOverlay.addEventListener('click', function (e) { if (e.target === statsOverlay) closeStats(); });
 
+  /* ---------- calendar view ---------- */
+  var SIDE_MIN = 240, SIDE_MAX = 520;
+
+  function calDayNotes(d) {
+    var d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    var d1 = d0 + 86400000;
+    return notes.filter(function (n) {
+      if (n.deleted) return false;
+      var t = Math.max(n.createdAt || 0, n.updatedAt || 0);
+      return t >= d0 && t < d1;
+    });
+  }
+  function calGridHtml() {
+    var m = ui.calMonth;
+    var lead = (new Date(m.getFullYear(), m.getMonth(), 1).getDay() + 6) % 7; // Monday-first
+    var count = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var html = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (w) {
+      return '<span class="cal-cell cal-hd">' + w + '</span>';
+    }).join('');
+    for (var i = 0; i < lead; i++) html += '<span class="cal-cell cal-pad"></span>';
+    for (var d = 1; d <= count; d++) {
+      var dt = new Date(m.getFullYear(), m.getMonth(), d);
+      var c = calDayNotes(dt).length;
+      var cls = 'cal-cell cal-day' +
+        (dt.getTime() === today.getTime() ? ' today' : '') +
+        (ui.calDay && dt.getTime() === ui.calDay.getTime() ? ' sel' : '') +
+        (c ? ' has' : '');
+      html += '<button class="' + cls + '" data-day="' + d + '">' + d + (c ? '<i></i>' : '') + '</button>';
+    }
+    return html;
+  }
+  function clampCalSel() {
+    if (ui.calDay && (ui.calDay.getFullYear() !== ui.calMonth.getFullYear() || ui.calDay.getMonth() !== ui.calMonth.getMonth())) ui.calDay = null;
+  }
+  function renderCalendar() {
+    calTitle.textContent = ui.calMonth.toLocaleDateString([], { month: 'long', year: 'numeric' });
+    calGrid.innerHTML = calGridHtml();
+    renderCalDay();
+  }
+  function renderCalDay() {
+    if (!ui.calDay) {
+      calDayBox.innerHTML = '<p class="cal-hint">Pick a day to see what you wrote that day.</p>';
+      return;
+    }
+    var d = ui.calDay;
+    var list = calDayNotes(d).slice().sort(function (a, b) {
+      return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
+    });
+    var html = '<div class="cal-dayhead"><b>' + d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) + '</b></div>';
+    html += list.length ? list.map(function (n) {
+      var t = new Date(Math.max(n.createdAt || 0, n.updatedAt || 0)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return '<button class="cal-note" data-open="' + escapeHtml(n.id) + '">' + ICONS.file +
+        '<span class="cal-note-t">' + escapeHtml(n.title || 'Untitled') + '</span>' +
+        '<span class="cal-note-time">' + t + '</span></button>';
+    }).join('') : '<p class="cal-hint">Nothing on this day yet.</p>';
+    html += '<button class="btn small ghost cal-new" data-newday="1">' + ICONS.plusL + '<span>New entry for this day</span></button>';
+    calDayBox.innerHTML = html;
+  }
+  function createCalEntry() {
+    if (!ui.calDay) return;
+    var title = ui.calDay.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    var existing = null;
+    notes.forEach(function (n) { if (!n.deleted && n.title === title) existing = n; });
+    if (existing) { openNote(existing.id); renderCalendar(); return; }
+    createNote({ title: title, tags: ['journal'], body: '# ' + title + '\n\n**Mood:**\n\n## Notes\n- \n\n## Free thoughts\n\n' });
+    renderCalendar();
+  }
+  calViewBtn.addEventListener('click', function () {
+    if (ui.cal && !ui.trash) { ui.cal = false; }
+    else { ui.cal = true; ui.trash = false; }
+    renderAll();
+  });
+  calPrevBtn.addEventListener('click', function () {
+    ui.calMonth = new Date(ui.calMonth.getFullYear(), ui.calMonth.getMonth() - 1, 1);
+    clampCalSel(); renderCalendar();
+  });
+  calNextBtn.addEventListener('click', function () {
+    ui.calMonth = new Date(ui.calMonth.getFullYear(), ui.calMonth.getMonth() + 1, 1);
+    clampCalSel(); renderCalendar();
+  });
+  calTodayBtn.addEventListener('click', function () {
+    var t = new Date();
+    ui.calMonth = new Date(t.getFullYear(), t.getMonth(), 1);
+    ui.calDay = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    renderCalendar();
+  });
+  calGrid.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-day]') : null;
+    if (!b) return;
+    var d = new Date(ui.calMonth.getFullYear(), ui.calMonth.getMonth(), +b.getAttribute('data-day'));
+    ui.calDay = (ui.calDay && ui.calDay.getTime() === d.getTime()) ? null : d;
+    renderCalendar();
+  });
+  calDayBox.addEventListener('click', function (e) {
+    var o = e.target.closest ? e.target.closest('[data-open]') : null;
+    if (o) { openNote(o.getAttribute('data-open')); closeMobileSidebar(); return; }
+    if (e.target.closest && e.target.closest('[data-newday]')) createCalEntry();
+  });
+
   /* ---------- help center ---------- */
   function openHelp() { helpOverlay.hidden = false; }
   function closeHelp() { helpOverlay.hidden = true; }
@@ -2386,6 +2551,9 @@
     });
     loadSync();
     load();
+    if (settings.sideWidth) document.documentElement.style.setProperty('--side-w', settings.sideWidth + 'px');
+    if (settings.sideCollapsed) document.body.classList.add('side-collapsed');
+    updateSideNarrow();
     applyTheme();
     updateAccentMenu();
     if (settings.lastId && getNote(settings.lastId) && !getNote(settings.lastId).deleted) {
@@ -2397,11 +2565,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '6') {
-      store.set(VER_KEY, '6');
+    if (ver !== '7') {
+      store.set(VER_KEY, '7');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.5 \u2014 Notebook insights (\uD83D\uDCCA in the sidebar) & a Backup-menu fix', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.6 \u2014 resizable & hideable sidebar, Calendar view, accent-menu fix', { timeout: 6500 });
         }, 700);
       }
     }

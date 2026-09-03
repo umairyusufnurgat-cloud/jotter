@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.6 — sidebar overhaul, calendar, fixes
+
+- 🐛 **Fixed the accent-colour menu** opening partly off the left edge of the screen (same root cause as the v1.5 Backup-menu fix — menus now anchor to their full button row)
+- 🐛 **Fixed the squeezed sidebar header** — the brand row now fits all six buttons at the default width, and compresses gracefully when you drag narrower
+- 📏 **Resizable & hideable sidebar** — drag its right edge to any width (240–520px, remembered); double-click the edge, press `Ctrl`/`⌘`+`\` or click the ☰ toolbar button to hide it completely for full-width writing
+- 🗓 **Calendar view** — third tab in the sidebar bottom: a month grid with a dot on every day you wrote something; click a day to see that day's notes or start a dated journal entry (counts toward your 🔥 streak)
+
 ## v1.5 — insights & Backup-menu fix
 
 - 🐛 **Fixed the Backup menu** opening partly off the left edge of the screen — footer menus now anchor to the full footer row, so they can never clip

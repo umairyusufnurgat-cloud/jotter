@@ -1143,3 +1143,88 @@ mark {
 .stat-bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width .4s ease; }
 .stat-hint { font-size: 12px; color: var(--text-muted); margin: 0 0 4px; }
 @media (max-width: 640px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
+
+/* ============================================================
+   v1.6 — sidebar resize/collapse, calendar view, header fixes
+   ============================================================ */
+/* accent menu: anchor to the whole button row (it was right-aligned
+   to one small button, pushing it off the left edge of the screen) */
+.side-top-actions { position: relative; flex-shrink: 0; }
+.side-top-actions .menu-anchor { position: static; }
+.side-top-actions .menu { right: 0; left: auto; }
+
+/* roomier sidebar header: brand + six 28px buttons fit at 302px */
+.side-top { padding: 12px 12px 8px 14px; }
+.side-top-actions .icon-btn { width: 28px; height: 28px; }
+.brand { min-width: 0; }
+.brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* resizable + hideable sidebar (desktop only — the mobile drawer
+   keeps its own fixed width) */
+@media (min-width: 901px) {
+  .sidebar {
+    position: relative;
+    width: var(--side-w, 302px);
+    min-width: var(--side-w, 302px);
+  }
+}
+.side-resizer {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: 7px; cursor: col-resize; z-index: 46;
+  display: none;
+  touch-action: none;
+}
+.side-resizer::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 3px; height: 36px; border-radius: 3px;
+  transform: translate(-50%, -50%);
+  background: var(--border-strong); opacity: 0;
+  transition: opacity .15s ease, background .15s ease;
+}
+.side-resizer:hover::after, .side-resizer.active::after { opacity: 1; background: var(--accent); }
+body.resizing { cursor: col-resize; }
+body.resizing .side-resizer { background: var(--accent-soft); }
+@media (min-width: 901px) {
+  .side-resizer { display: block; }
+  body.side-collapsed .sidebar {
+    width: 0; min-width: 0;
+    border-right-width: 0;
+    overflow: hidden;
+  }
+}
+body.side-anim .sidebar { transition: width .18s ease, min-width .18s ease; }
+
+/* compact header when the sidebar is dragged narrow */
+.sidebar.narrow .brand-name, .sidebar.narrow #cmdBtn { display: none; }
+.sidebar.narrow .side-top { padding: 10px 10px 6px 10px; }
+.sidebar.narrow .side-top-actions .icon-btn { width: 26px; height: 26px; }
+.sidebar.narrow .seg-btn span:not(.count) { display: none; }
+.sidebar.narrow .seg-btn { padding: 7px 6px; }
+
+/* calendar view */
+.cal-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; padding-top: 6px; }
+.cal-head { display: flex; align-items: center; gap: 4px; padding: 2px 12px 6px; }
+.cal-head b { flex: 1; text-align: center; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 0 12px; }
+.cal-cell { position: relative; display: flex; align-items: center; justify-content: center; height: 36px; border-radius: 9px; font-size: 12px; color: var(--text); }
+.cal-hd { height: 20px; font-size: 10px; font-weight: 700; color: var(--text-muted); }
+.cal-pad { pointer-events: none; }
+.cal-day:hover { background: var(--bg-hover); }
+.cal-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); font-weight: 700; }
+.cal-day.sel { background: var(--accent); color: #fff; font-weight: 700; }
+.cal-day.has i { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+.cal-day.sel i { background: #fff; }
+.cal-daybox { padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 4px; }
+.cal-dayhead { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; margin-bottom: 2px; }
+.cal-hint { font-size: 12px; color: var(--text-muted); margin: 2px 0 6px; }
+.cal-note {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 9px; border-radius: 9px;
+  font-size: 12.5px; text-align: left;
+  color: var(--text);
+}
+.cal-note:hover { background: var(--bg-hover); }
+.cal-note svg { flex-shrink: 0; color: var(--text-muted); }
+.cal-note-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.cal-note-time { font-size: 10.5px; color: var(--text-muted); }
+.cal-new { margin-top: 6px; }

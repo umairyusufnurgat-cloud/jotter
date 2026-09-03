@@ -30,6 +30,8 @@
 - 🖼 **Images in notes** — paste screenshots with `Ctrl`/`⌘`+`V` or drag image files in; they're auto-resized and stored locally
 - ⏱ **Timestamps** — `Ctrl`/`⌘`+`;` drops in the current date & time
 - 📊 **Notebook insights** — words written, journaling streak, activity charts, top tags and storage usage
+- 🗓 **Calendar view** — month grid of your writing activity; click a day to see or start that day's entry
+- 📏 **Resizable, hideable sidebar** — drag its edge to resize; `Ctrl`/`⌘`+`\` hides it for distraction-free writing
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags — with match highlighting
@@ -104,6 +106,7 @@ python3 -m http.server 8000
 | `Ctrl`/`⌘` + `E` | Cycle view: Edit → Split → Preview |
 | `Ctrl`/`⌘` + `B` / `I` | Bold / italic (wraps selection) |
 | `Ctrl`/`⌘` + `;` | Insert timestamp |
+| `Ctrl`/`⌘` + `\` | Show / hide the sidebar |
 | `Ctrl`/`⌘` + `V` | Paste an image from the clipboard into the note |
 | `[[` | Insert a wiki-link (autocomplete popup) |
 | `Tab` / `Shift + Tab` | Indent / outdent lines in the editor |
