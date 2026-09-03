@@ -173,6 +173,7 @@
   var graphMeta = $('#graphMeta'), graphWrap = $('#graphWrap'), graphSvg = $('#graphSvg');
   var findBar = $('#findBar'), findInput = $('#findInput'), findCount = $('#findCount');
   var findPrevBtn = $('#findPrevBtn'), findNextBtn = $('#findNextBtn'), findCloseBtn = $('#findCloseBtn');
+  var dlMdBtn = $('#dlMdBtn'), printMdBtn = $('#printMdBtn');
   var syncTokenInput = $('#syncTokenInput'), syncSaveBtn = $('#syncSaveBtn'), syncStatus = $('#syncStatus');
   var syncNowBtn = $('#syncNowBtn'), syncAutoChk = $('#syncAutoChk'), syncDisconnectBtn = $('#syncDisconnectBtn'), aboutInfo = $('#aboutInfo');
   var promptOverlay = $('#promptOverlay'), promptTitle = $('#promptTitle'), promptInput = $('#promptInput');
@@ -1068,13 +1069,18 @@
     if (ui.activeId) trashNote(ui.activeId);
   });
 
-  downloadNoteBtn.addEventListener('click', function () {
+  function downloadCurrentNote() {
     var n = getNote(ui.activeId);
     if (!n) return;
     download(slug(n.title) + '.md', (n.title ? '# ' + n.title + '\n\n' : '') + n.body, 'text/markdown');
+  }
+  downloadNoteBtn.addEventListener('click', function () {
+    noteMenu.hidden = true;
+    downloadCurrentNote();
   });
-
   printBtn.addEventListener('click', function () { window.print(); });
+  dlMdBtn.addEventListener('click', function () { noteMenu.hidden = true; downloadCurrentNote(); });
+  printMdBtn.addEventListener('click', function () { noteMenu.hidden = true; window.print(); });
 
   /* trash banner */
   restoreBtn.addEventListener('click', function () { if (ui.activeId) restoreNote(ui.activeId); });
@@ -2120,7 +2126,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.8 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.9 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -3029,11 +3035,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '9') {
-      store.set(VER_KEY, '9');
+    if (ver !== '10') {
+      store.set(VER_KEY, '10');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.8 \u2014 Note graph (see your notes as a map) & find in note (Ctrl+F)', { timeout: 6500 });
+          toast('\u2728 Jotter updated to v1.9 \u2014 mobile fix: the toolbar (and Move to trash) now fit properly on phones', { timeout: 6500 });
         }, 700);
       }
     }

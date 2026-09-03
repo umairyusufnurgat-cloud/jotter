@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.9 — mobile layout fix
+
+- 📱 **Fixed the mobile toolbar** — on phones (≤640px) the editor toolbar needed ~460px in a 375px viewport, crushing the buttons and pushing **More ▾ → Move to trash** to the edge. The toolbar now compacts cleanly (smaller buttons and view switcher), and **Download .md / Print** moved into the More menu where there's room for them — nothing is lost, everything fits
+- 🍎 Text inputs are 16px on phones so iOS Safari no longer zooms the page when you tap the title, search, tag or find fields
+- 🖨 Printing now also hides the find bar and resize handle
+
 ## v1.8 — note graph & find in note
 
 - 🕸 **Note graph** — your whole notebook as a living map: every note is a bubble (bigger = more `[[wiki-links]]`), every link a connection. It's a real force-directed physics simulation in pure SVG — drag bubbles around and watch them settle, scroll to zoom, drag the background to pan, double-click to re-fit, click a bubble to open the note. Open it with the **Note graph** button under *Today's journal* or via `Ctrl`+`K`

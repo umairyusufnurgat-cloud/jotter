@@ -171,8 +171,8 @@
           <button class="icon-btn" id="starBtn" title="Star" aria-label="Star note" aria-pressed="false"></button>
           <button class="icon-btn" id="pinBtn" data-icon="pin" title="Pin" aria-label="Pin note" aria-pressed="false"></button>
           <span class="tool-sep"></span>
-          <button class="icon-btn" id="downloadNoteBtn" data-icon="download" title="Download .md" aria-label="Download note as markdown"></button>
-          <button class="icon-btn" id="printBtn" data-icon="printer" title="Print / save as PDF" aria-label="Print note"></button>
+          <button class="icon-btn hide-sm" id="downloadNoteBtn" data-icon="download" title="Download .md" aria-label="Download note as markdown"></button>
+          <button class="icon-btn hide-sm" id="printBtn" data-icon="printer" title="Print / save as PDF" aria-label="Print note"></button>
           <div class="menu-anchor">
             <button class="icon-btn" id="noteMenuBtn" data-icon="more" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false"></button>
             <div class="menu" id="noteMenu" hidden>
@@ -181,6 +181,8 @@
               <hr />
               <button id="histBtn" data-icon="undo"><span>Version history</span></button>
               <button id="shareBtn" data-icon="link"><span>Share as link</span></button>
+              <button id="dlMdBtn" data-icon="download"><span>Download .md</span></button>
+              <button id="printMdBtn" data-icon="printer"><span>Print / save as PDF</span></button>
               <hr />
               <button id="trashCurrentBtn" class="danger" data-icon="trash"><span>Move to trash</span></button>
             </div>
@@ -387,7 +389,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="pin"></span><div class="bg-txt"><b>Pin</b> &mdash; keep this note at the top of the list</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Download</b> &mdash; save this note as a <code>.md</code> file</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="printer"></span><div class="bg-txt"><b>Print</b> &mdash; print or save as PDF with clean print styles</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, browse its version history, share it as a link, or move it to trash</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="more"></span><div class="bg-txt"><b>More</b> &mdash; duplicate the note, copy its markdown, browse version history, share it as a link, download or print it, or move it to trash</div></div>
 
           <h4>In the editor</h4>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tags</b> &mdash; type a name and press <kbd>&#8629;</kbd>; click &times; on a chip to remove it</div></div>
@@ -402,7 +404,14 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.8 <span class="pill">current</span></h4>
+            <h4>v1.9 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128241; <b>Fixed the mobile toolbar</b> &mdash; on phones the buttons were being squeezed together and <b>More &#9662; &rarr; Move to trash</b> was pushed to the edge. Everything now fits cleanly, and Download / Print moved into the More menu where there&rsquo;s room</li>
+              <li>&#127822; Inputs no longer zoom the page on iPhone, and printing hides stray UI</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.8 &mdash; note graph &amp; find in note</h4>
             <ul>
               <li>&#128376; <b>Note graph</b> &mdash; see your whole notebook as a living map: every note is a bubble, every [[wiki-link]] a connection. Drag them around, zoom, pan, and click a bubble to open the note (button under <b>Today&rsquo;s journal</b>, or <kbd>Ctrl</kbd>+<kbd>K</kbd>)</li>
               <li>&#128269; <b>Find in note</b> &mdash; <kbd>Ctrl</kbd>+<kbd>F</kbd> now highlights every match in the preview and jumps between them (the sidebar search stays on <kbd>/</kbd>)</li>
