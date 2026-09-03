@@ -80,7 +80,17 @@
     undo: svg('<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>', 14),
     undoS: svg('<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>', 13),
     x: svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),
-    xS: svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>', 11)
+    xS: svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>', 11),
+    plusL: svg('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>', 24),
+    cmd: svg('<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>', 16),
+    chevDown: svg('<polyline points="6 9 12 15 18 9"/>', 14),
+    users: svg('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', 15),
+    bookOpen: svg('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', 15),
+    zap: svg('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', 15),
+    listIcon: svg('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>', 15),
+    fileText: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', 15),
+    droplet: svg('<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>', 16),
+    columns: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/>', 15)
   };
 
   /* ---------------- storage (localStorage w/ fallback) ---------------- */
@@ -99,20 +109,30 @@
 
   var NOTES_KEY = 'jotter.notes.v1';
   var SETTINGS_KEY = 'jotter.settings.v1';
+  var VER_KEY = 'jotter.ver';
 
   /* ---------------- state ---------------- */
   var notes = [];
-  var settings = { theme: null, sort: 'updated', view: 'split', lastId: null };
+  var settings = { theme: null, sort: 'updated', view: 'split', lastId: null, accent: 'indigo' };
   var ui = { activeId: null, search: '', tag: null, trash: false };
   var dirty = false;
   var purgeArm = { id: null, t: null };
+  var wikiPop = { open: false, items: [], sel: 0, startIdx: 0, caret: 0 };
 
   /* ---------------- dom refs ---------------- */
   var sidebar = $('#sidebar'), overlay = $('#overlay'), toastEl = $('#toast');
   var notesList = $('#notesList'), tagFilters = $('#tagFilters'), searchInput = $('#searchInput'), sortSelect = $('#sortSelect');
   var newNoteBtn = $('#newNoteBtn'), dailyBtn = $('#dailyBtn'), themeBtn = $('#themeBtn');
   var notesViewBtn = $('#notesViewBtn'), trashViewBtn = $('#trashViewBtn'), trashCount = $('#trashCount');
-  var exportAllBtn = $('#exportAllBtn'), importBtn = $('#importBtn'), importFile = $('#importFile');
+  var exportAllBtn = $('#expJsonBtn'), importBtn = $('#restoreJsonBtn'), importFile = $('#importFile'), importMdFile = $('#importMdFile');
+  var backupBtn = $('#backupBtn'), backupMenu = $('#backupMenu'), expMdBtn = $('#expMdBtn');
+  var impBtn = $('#impBtn'), impMenu = $('#impMenu'), importMdBtn = $('#importMdBtn');
+  var templateBtn = $('#templateBtn'), templateMenu = $('#templateMenu');
+  var accentBtn = $('#accentBtn'), accentMenu = $('#accentMenu');
+  var cmdBtn = $('#cmdBtn'), cmdkOverlay = $('#cmdkOverlay'), cmdkInput = $('#cmdkInput'), cmdkList = $('#cmdkList');
+  var fabNew = $('#fabNew'), dropOverlay = $('#dropOverlay');
+  var toastMsg = $('#toastMsg'), toastAct = $('#toastAct');
+  var wikiPopEl = $('#wikiPop'), streakBadge = $('#streakBadge');
   var storageNote = $('#storageNote'), emptyTrashBtn = $('#emptyTrashBtn');
   var emptyState = $('#emptyState'), emptyTitle = $('#emptyTitle'), emptyText = $('#emptyText');
   var emptyNewBtn = $('#emptyNewBtn'), emptyDailyBtn = $('#emptyDailyBtn'), clearFiltersBtn = $('#clearFiltersBtn');
@@ -193,9 +213,13 @@
     '- Notes live in this browser\u2019s local storage \u2014 use **Backup** in the sidebar to export them any time',
     '- **Restore** merges a backup file back in; the newest edit always wins',
     '',
+    '## \uD83D\uDD17 Link notes together',
+    '',
+    'Type `[[` while writing to link to another note by name \u2014 for example, [[Ideas]]. Clicking a link opens that note, or creates it if it doesn\u2019t exist yet.',
+    '',
     '---',
     '',
-    '\uD83D\uDCA1 Tip: press **N** to start a new note, **/** to search, and **Ctrl Alt N** from anywhere.'
+    '\uD83D\uDCA1 Tip: press **Ctrl K** for the command palette, **N** for a new note, and **/** to search.'
   ].join('\n');
 
   function seed() {
@@ -288,6 +312,10 @@
     trashCount.textContent = trashed > 0 ? String(trashed) : '';
     trashCount.hidden = trashed === 0;
     emptyTrashBtn.hidden = !(ui.trash && trashed > 0);
+    var streak = journalStreak();
+    streakBadge.hidden = streak < 2;
+    if (streak >= 2) streakBadge.textContent = '\uD83D\uDD25 ' + streak;
+    dailyBtn.title = streak >= 2 ? streak + '-day journaling streak' : 'Create today\u2019s journal entry';
     renderTagFilters();
     renderNotesList();
   }
@@ -423,6 +451,17 @@
       ? window.JotterMD.render(val)
       : '<p>' + escapeHtml(val) + '</p>';
     if (!val.trim()) previewArea.innerHTML = '<p class="placeholder-line">Nothing to preview yet…</p>';
+    markMissingWikiLinks();
+  }
+
+  function markMissingWikiLinks() {
+    $$('.wiki-link', previewArea).forEach(function (a) {
+      var t = (a.getAttribute('data-wiki') || '').trim().toLowerCase();
+      var ok = notes.some(function (n) {
+        return !n.deleted && (n.title || '').trim().toLowerCase() === t;
+      });
+      if (!ok) a.classList.add('missing');
+    });
   }
 
   function updateStats() {
@@ -624,6 +663,12 @@
 
   /* task checkbox toggling inside the preview */
   previewArea.addEventListener('click', function (e) {
+    var wl = e.target.closest ? e.target.closest('a.wiki-link') : null;
+    if (wl) {
+      e.preventDefault();
+      openWikiLink(wl.getAttribute('data-wiki') || '');
+      return;
+    }
     var cb = e.target.closest ? e.target.closest('input[type="checkbox"][data-task]') : null;
     if (!cb) return;
     var n = getNote(ui.activeId);
@@ -656,10 +701,16 @@
   });
 
   /* editor niceties */
-  editorArea.addEventListener('input', markDirty);
+  editorArea.addEventListener('input', function () { markDirty(); updateWikiPop(); });
   titleInput.addEventListener('input', markDirty);
 
   editorArea.addEventListener('keydown', function (e) {
+    if (wikiPop.open && wikiPop.items.length) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); wikiPop.sel = (wikiPop.sel + 1) % wikiPop.items.length; renderWikiSel(); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); wikiPop.sel = (wikiPop.sel - 1 + wikiPop.items.length) % wikiPop.items.length; renderWikiSel(); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); completeWiki(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); hideWikiPop(); return; }
+    }
     var mod = e.ctrlKey || e.metaKey;
     if (e.key === 'Tab') { e.preventDefault(); handleTab(e); }
     else if (e.key === 'Enter' && !e.shiftKey && !mod) { handleEnter(e); }
@@ -791,14 +842,13 @@
   });
 
   noteMenuBtn.addEventListener('click', function () {
-    noteMenu.hidden = !noteMenu.hidden;
+    var open = noteMenu.hidden;
+    closeAllMenus();
+    noteMenu.hidden = !open;
     noteMenuBtn.setAttribute('aria-expanded', String(!noteMenu.hidden));
   });
   document.addEventListener('click', function (e) {
-    if (!(e.target.closest && e.target.closest('.menu-anchor'))) {
-      noteMenu.hidden = true;
-      noteMenuBtn.setAttribute('aria-expanded', 'false');
-    }
+    if (!(e.target.closest && e.target.closest('.menu-anchor'))) closeAllMenus();
   });
   duplicateBtn.addEventListener('click', function () { noteMenu.hidden = true; duplicateNote(); });
   copyMdBtn.addEventListener('click', function () { noteMenu.hidden = true; copyMarkdown(); });
@@ -931,6 +981,7 @@
       (!settings.theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     themeBtn.innerHTML = dark ? ICONS.sun : ICONS.moon;
+    applyAccent();
   }
   themeBtn.addEventListener('click', function () {
     var dark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -960,18 +1011,29 @@
     return out || 'untitled';
   }
 
-  exportAllBtn.addEventListener('click', function () {
+  function exportBackup() {
     var payload = { app: 'jotter', version: 1, exportedAt: new Date().toISOString(), notes: notes };
     download('jotter-backup-' + new Date().toISOString().slice(0, 10) + '.json',
       JSON.stringify(payload, null, 2), 'application/json');
     toast('Backup downloaded — keep it somewhere safe');
-  });
+  }
 
-  importBtn.addEventListener('click', function () { importFile.click(); });
-  importFile.addEventListener('change', function () {
-    var f = importFile.files && importFile.files[0];
-    importFile.value = '';
-    if (!f) return;
+  function exportAllMd() {
+    var list = notes.filter(function (n) { return !n.deleted; })
+      .sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+    if (!list.length) { toast('No notes to export yet'); return; }
+    var parts = list.map(function (n) {
+      var head = '# ' + (n.title || 'Untitled');
+      var b = String(n.body || '');
+      if (b.slice(0, head.length).toLowerCase() !== head.toLowerCase()) b = head + '\n\n' + b;
+      if (n.tags.length) b += '\n\n*Tags: ' + n.tags.join(', ') + '*';
+      return b + '\n\n---\n\n';
+    });
+    download('jotter-notes-' + new Date().toISOString().slice(0, 10) + '.md', parts.join(''), 'text/markdown');
+    toast('Exported ' + list.length + ' note' + (list.length === 1 ? '' : 's') + ' as Markdown');
+  }
+
+  function importJsonFile(f) {
     var reader = new FileReader();
     reader.onload = function () {
       try {
@@ -998,6 +1060,83 @@
       }
     };
     reader.readAsText(f);
+  }
+
+  function importMdFiles(fileList) {
+    var files = Array.prototype.slice.call(fileList)
+      .filter(function (f) { return /\.(md|markdown|txt)$/i.test(f.name); });
+    if (!files.length) { toast('No .md / .txt files found'); return; }
+    var done = 0, last = null, count = files.length;
+    files.forEach(function (f) {
+      var r = new FileReader();
+      r.onload = function () {
+        var text = String(r.result || '');
+        var title = f.name.replace(/\.(md|markdown|txt)$/i, '').replace(/[_-]+/g, ' ').trim() || 'Imported note';
+        var head = '# ' + title;
+        if (text.slice(0, head.length).toLowerCase() === head.toLowerCase()) {
+          text = text.slice(head.length).replace(/^\s+/, '');
+        }
+        var note = normalizeNote({ title: title, body: text, tags: [] });
+        notes.unshift(note);
+        last = note;
+        finish();
+      };
+      r.onerror = function () { finish(); };
+      r.readAsText(f);
+    });
+    function finish() {
+      if (++done < count) return;
+      persist();
+      if (last) { ui.activeId = last.id; ui.trash = false; }
+      renderAll();
+      toast('Imported ' + count + ' note' + (count === 1 ? '' : 's'));
+    }
+  }
+
+  exportAllBtn.addEventListener('click', function () { closeAllMenus(); exportBackup(); });
+  expMdBtn.addEventListener('click', function () { closeAllMenus(); exportAllMd(); });
+  importBtn.addEventListener('click', function () { closeAllMenus(); importFile.click(); });
+  importMdBtn.addEventListener('click', function () { closeAllMenus(); importMdFile.click(); });
+  bindMenu(backupBtn, backupMenu);
+  bindMenu(impBtn, impMenu);
+
+  importFile.addEventListener('change', function () {
+    var f = importFile.files && importFile.files[0];
+    importFile.value = '';
+    if (f) importJsonFile(f);
+  });
+  importMdFile.addEventListener('change', function () {
+    var fs = importMdFile.files;
+    importMdFile.value = '';
+    if (fs && fs.length) importMdFiles(fs);
+  });
+
+  /* drag & drop import */
+  var dragDepth = 0;
+  function hasFiles(e) {
+    return !!(e.dataTransfer && e.dataTransfer.types &&
+      Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1);
+  }
+  window.addEventListener('dragenter', function (e) {
+    if (!hasFiles(e)) return;
+    dragDepth++;
+    dropOverlay.hidden = false;
+  });
+  window.addEventListener('dragleave', function (e) {
+    if (!hasFiles(e)) return;
+    if (--dragDepth <= 0) { dragDepth = 0; dropOverlay.hidden = true; }
+  });
+  window.addEventListener('dragover', function (e) { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    dropOverlay.hidden = true;
+    var files = Array.prototype.slice.call(e.dataTransfer.files);
+    var json = files.filter(function (f) { return /\.json$/i.test(f.name); })[0];
+    var md = files.filter(function (f) { return /\.(md|markdown|txt)$/i.test(f.name); });
+    if (json) importJsonFile(json);
+    if (md.length) importMdFiles(md);
   });
 
   function copyMarkdown() {
@@ -1029,11 +1168,23 @@
 
   /* ---------------- toasts ---------------- */
   var toastTimer = null;
-  function toast(msg) {
-    toastEl.textContent = msg;
+  function toast(msg, opts) {
+    opts = opts || {};
+    toastMsg.textContent = msg;
+    if (opts.actionLabel) {
+      toastAct.textContent = opts.actionLabel;
+      toastAct.hidden = false;
+      toastAct.onclick = function () {
+        toastEl.classList.remove('show');
+        if (opts.onAction) opts.onAction();
+      };
+    } else {
+      toastAct.hidden = true;
+      toastAct.onclick = null;
+    }
     toastEl.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2800);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, opts.timeout || 2800);
   }
 
   /* ---------------- global shortcuts ---------------- */
@@ -1043,16 +1194,21 @@
     var inField = ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     var k = e.key.toLowerCase();
 
-    if (mod && e.altKey && k === 'n') { e.preventDefault(); createNote(); }
+    if (mod && k === 'k') { e.preventDefault(); togglePalette(); }
+    else if (mod && e.altKey && k === 'n') { e.preventDefault(); createNote(); }
     else if (mod && k === 'f') { e.preventDefault(); focusSearch(); }
     else if (mod && k === 's') { e.preventDefault(); saveActive(); toast('Saved'); }
     else if (mod && k === 'e') { e.preventDefault(); cycleView(); }
     else if (k === '/' && !inField) { e.preventDefault(); focusSearch(); }
     else if (k === 'n' && !inField && !mod && !e.altKey) { createNote(); }
     else if (e.key === 'Escape') {
-      noteMenu.hidden = true;
-      closeMobileSidebar();
-      if (ae === searchInput) searchInput.blur();
+      if (!cmdkOverlay.hidden) closePalette();
+      else if (wikiPop.open) hideWikiPop();
+      else {
+        closeAllMenus();
+        closeMobileSidebar();
+        if (ae === searchInput) searchInput.blur();
+      }
     }
   });
 
@@ -1078,9 +1234,385 @@
   /* ---------------- service worker (offline + installable) ---------------- */
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('service-worker.js').catch(function () { /* fine */ });
+      navigator.serviceWorker.register('service-worker.js').then(function (reg) {
+        if (reg.waiting && navigator.serviceWorker.controller) { updateToast(); return; }
+        reg.addEventListener('updatefound', function () {
+          var w = reg.installing;
+          if (!w) return;
+          w.addEventListener('statechange', function () {
+            if (w.state === 'installed' && navigator.serviceWorker.controller) updateToast();
+          });
+        });
+      }).catch(function () { /* fine */ });
     });
   }
+  function updateToast() {
+    toast('\u2728 A new version of Jotter is ready', {
+      actionLabel: 'Reload',
+      onAction: function () { location.reload(); },
+      timeout: 12000
+    });
+  }
+
+  /* ============================================================
+     v1.1 — accent colours, streak, templates, command palette,
+     wiki-links, split new-note button, mobile FAB
+     ============================================================ */
+
+  /* ---------- generic menus ---------- */
+  var ALL_MENUS = null;
+  function closeAllMenus() {
+    (ALL_MENUS || []).forEach(function (p) {
+      p[0].hidden = true;
+      p[1].setAttribute('aria-expanded', 'false');
+    });
+  }
+  function bindMenu(btn, menu) {
+    btn.addEventListener('click', function () {
+      var open = menu.hidden;
+      closeAllMenus();
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(!menu.hidden));
+    });
+  }
+  ALL_MENUS = [
+    [noteMenu, noteMenuBtn],
+    [templateMenu, templateBtn],
+    [accentMenu, accentBtn],
+    [backupMenu, backupBtn],
+    [impMenu, impBtn]
+  ];
+  bindMenu(templateBtn, templateMenu);
+  bindMenu(accentBtn, accentMenu);
+
+  /* ---------- accent colours ---------- */
+  var ACCENTS = {
+    indigo: { l: '#6558d3', lh: '#5448c0', d: '#948cf4', dh: '#a9a2f7' },
+    teal: { l: '#0f9187', lh: '#0c7a72', d: '#5fd3c7', dh: '#7fded4' },
+    blue: { l: '#2563eb', lh: '#1e54cc', d: '#7aa5f8', dh: '#94b8fa' },
+    rose: { l: '#d64560', lh: '#c13650', d: '#f797a7', dh: '#f9acb9' },
+    green: { l: '#2f9e44', lh: '#288739', d: '#69db7c', dh: '#85e396' },
+    amber: { l: '#b45309', lh: '#9c4708', d: '#f5b942', dh: '#f7c861' }
+  };
+
+  function hexToRgba(hex, a) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return 'rgba(101,88,211,' + a + ')';
+    var n = parseInt(m[1], 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  function applyAccent() {
+    var a = ACCENTS[settings.accent] || ACCENTS.indigo;
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var main = dark ? a.d : a.l;
+    var hover = dark ? a.dh : a.lh;
+    var s = document.documentElement.style;
+    s.setProperty('--accent', main);
+    s.setProperty('--accent-hover', hover);
+    s.setProperty('--accent-soft', hexToRgba(main, dark ? 0.18 : 0.12));
+    s.setProperty('--ring', hexToRgba(main, dark ? 0.4 : 0.3));
+  }
+
+  function updateAccentMenu() {
+    $$('.swatch', accentMenu).forEach(function (s) {
+      s.classList.toggle('active', s.getAttribute('data-accent') === (settings.accent || 'indigo'));
+    });
+  }
+  accentMenu.addEventListener('click', function (e) {
+    var s = e.target.closest ? e.target.closest('[data-accent]') : null;
+    if (!s) return;
+    settings.accent = s.getAttribute('data-accent');
+    persistSettings();
+    applyAccent();
+    updateAccentMenu();
+    closeAllMenus();
+    toast('Accent colour updated');
+  });
+
+  /* ---------- journaling streak ---------- */
+  function journalStreak() {
+    function dayTitle(d) {
+      return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    function dayHas(d) {
+      var title = dayTitle(d);
+      var ds = d.toDateString();
+      return notes.some(function (n) {
+        if (n.deleted) return false;
+        if (n.title === title) return true;
+        if (n.tags.indexOf('journal') !== -1) {
+          var t = n.updatedAt || n.createdAt;
+          return new Date(t).toDateString() === ds;
+        }
+        return false;
+      });
+    }
+    var streak = 0;
+    var d = new Date();
+    if (!dayHas(d)) d.setDate(d.getDate() - 1); // today not written yet — streak counts up to yesterday
+    while (dayHas(d)) { streak++; d.setDate(d.getDate() - 1); }
+    return streak;
+  }
+
+  /* ---------- note templates ---------- */
+  function dShort() {
+    return new Date().toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  var TEMPLATES = {
+    meeting: function () {
+      return {
+        title: 'Meeting — ' + dShort(), tags: ['meeting'],
+        body: '# Meeting — ' + dShort() + '\n\n**Attendees:** \n\n## Agenda\n- \n\n## Discussion\n\n## Decisions\n- \n\n## Action items\n- [ ] \n- [ ] \n'
+      };
+    },
+    reading: function () {
+      return {
+        title: 'Reading notes', tags: ['reading'],
+        body: '# Reading notes\n\n**Title:** \n**Author:** \n**Rating:** \u2B50\u2B50\u2B50\u2B50\u2B50\n\n## Summary\n\n## Key ideas\n- \n\n## Quotes\n> \n\n## How I\u2019ll apply this\n- \n'
+      };
+    },
+    project: function () {
+      return {
+        title: 'Project plan', tags: ['project'],
+        body: '# Project — \n\n## Goal\n\n## Success looks like\n- \n\n## Milestones\n\n| Target date | Milestone | Status |\n| --- | --- | --- |\n| | | Not started |\n\n## Risks & notes\n- \n'
+      };
+    },
+    braindump: function () {
+      return {
+        title: 'Brain dump — ' + dShort(), tags: [],
+        body: '# Brain dump — ' + dShort() + '\n\n- \n- \n- \n'
+      };
+    }
+  };
+  function openTemplate(key) {
+    if (key === 'journal') { openDaily(); return; }
+    var t = TEMPLATES[key] && TEMPLATES[key]();
+    if (!t) return;
+    createNote({ title: t.title, tags: t.tags, body: t.body });
+  }
+  templateMenu.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-tpl]') : null;
+    if (!b) return;
+    closeAllMenus();
+    openTemplate(b.getAttribute('data-tpl'));
+  });
+
+  /* ---------- command palette ---------- */
+  var pal = { items: [], sel: 0 };
+
+  function notePaletteItem(n) {
+    return {
+      type: 'note',
+      label: n.title || 'Untitled',
+      sub: fmtDate(n.updatedAt) + (n.tags.length ? ' · #' + n.tags[0] : ''),
+      icon: ICONS.file,
+      run: function () { openNote(n.id); }
+    };
+  }
+
+  function buildActions() {
+    var acts = [];
+    function A(label, sub, icon, run) {
+      acts.push({ type: 'action', label: label, sub: sub, icon: icon, run: run });
+    }
+    A('New note', 'Ctrl Alt N', ICONS.filePlus, function () { createNote(); });
+    A('Today\u2019s journal', '', ICONS.calendar, function () { openDaily(); });
+    A('New from template: Meeting notes', '', ICONS.users, function () { openTemplate('meeting'); });
+    A('New from template: Reading notes', '', ICONS.bookOpen, function () { openTemplate('reading'); });
+    A('New from template: Project plan', '', ICONS.listIcon, function () { openTemplate('project'); });
+    A('New from template: Brain dump', '', ICONS.zap, function () { openTemplate('braindump'); });
+    A('Cycle view (Edit / Split / Preview)', 'Ctrl E', ICONS.columns, function () { cycleView(); });
+    A('Toggle light / dark theme', '', ICONS.moon, function () { themeBtn.click(); });
+    A('Backup notes (JSON)', '', ICONS.download, function () { exportBackup(); });
+    A('Export all notes as Markdown', '', ICONS.fileText, function () { exportAllMd(); });
+    A('Restore JSON backup', '', ICONS.upload, function () { importFile.click(); });
+    A('Import Markdown files', '', ICONS.fileText, function () { importMdFile.click(); });
+    var trashed = notes.filter(function (n) { return n.deleted; }).length;
+    if (trashed) {
+      A('Empty trash (' + trashed + ' note' + (trashed === 1 ? '' : 's') + ')', '', ICONS.trash, function () {
+        notes = notes.filter(function (n) { return !n.deleted; });
+        persist();
+        if (ui.activeId && getNote(ui.activeId) && getNote(ui.activeId).deleted) ui.activeId = null;
+        renderAll();
+        toast('Trash emptied');
+      });
+    }
+    A(ui.trash ? 'Go to Notes' : 'Go to Trash', '', ui.trash ? ICONS.file : ICONS.trash, function () {
+      (ui.trash ? notesViewBtn : trashViewBtn).click();
+    });
+    return acts;
+  }
+
+  function paletteItems(q) {
+    q = (q || '').trim().toLowerCase();
+    var noteItems = [];
+    var live = notes.filter(function (n) { return !n.deleted; });
+    if (!q) {
+      live.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; })
+        .slice(0, 7).forEach(function (n) { noteItems.push(notePaletteItem(n)); });
+    } else {
+      var scored = [];
+      live.forEach(function (n) {
+        var t = (n.title || 'Untitled').toLowerCase();
+        var s = 0;
+        if (t.indexOf(q) === 0) s = 100;
+        else if (t.indexOf(q) !== -1) s = 80;
+        else if (n.tags.some(function (tg) { return tg.toLowerCase().indexOf(q) !== -1; })) s = 65;
+        else if ((n.body || '').toLowerCase().indexOf(q) !== -1) s = 45;
+        if (s) scored.push([s, n]);
+      });
+      scored.sort(function (a, b) { return (b[0] - a[0]) || (b[1].updatedAt - a[1].updatedAt); });
+      scored.slice(0, 8).forEach(function (x) { noteItems.push(notePaletteItem(x[1])); });
+    }
+    var acts = buildActions().filter(function (a) {
+      return !q || a.label.toLowerCase().indexOf(q) !== -1;
+    });
+    var items = [];
+    if (noteItems.length) {
+      if (!q) items.push({ type: 'sep', label: 'Recent notes' });
+      items = items.concat(noteItems);
+    }
+    if (acts.length) {
+      if (!q) items.push({ type: 'sep', label: 'Actions' });
+      items = items.concat(acts);
+    }
+    return items.slice(0, 16);
+  }
+
+  function renderPalette() {
+    var q = cmdkInput.value;
+    pal.items = paletteItems(q);
+    if (pal.sel >= pal.items.length) pal.sel = 0;
+    if (!pal.items.length) {
+      cmdkList.innerHTML = '<div class="cmdk-empty">Nothing found for \u201C' + escapeHtml(q) + '\u201D</div>';
+      return;
+    }
+    var html = '';
+    pal.items.forEach(function (it, i) {
+      if (it.type === 'sep') { html += '<div class="cmdk-sec">' + escapeHtml(it.label) + '</div>'; return; }
+      html += '<div class="cmdk-item' + (i === pal.sel ? ' sel' : '') + '" data-i="' + i + '" role="option">' +
+        '<span class="ci-icon">' + it.icon + '</span>' +
+        '<span class="ci-body"><span class="ci-label">' + escapeHtml(it.label) + '</span>' +
+        (it.sub ? '<span class="ci-sub">' + escapeHtml(it.sub) + '</span>' : '') +
+        '</span></div>';
+    });
+    cmdkList.innerHTML = html;
+    var selEl = cmdkList.querySelector('.cmdk-item.sel');
+    if (selEl && selEl.scrollIntoView) selEl.scrollIntoView({ block: 'nearest' });
+  }
+
+  function openPalette() {
+    cmdkOverlay.hidden = false;
+    cmdkInput.value = '';
+    pal.sel = 0;
+    renderPalette();
+    setTimeout(function () { cmdkInput.focus(); }, 0);
+  }
+  function closePalette() { cmdkOverlay.hidden = true; }
+  function togglePalette() { if (cmdkOverlay.hidden) openPalette(); else closePalette(); }
+
+  cmdBtn.addEventListener('click', openPalette);
+  cmdkOverlay.addEventListener('click', function (e) { if (e.target === cmdkOverlay) closePalette(); });
+  cmdkInput.addEventListener('input', function () { pal.sel = 0; renderPalette(); });
+  cmdkInput.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!pal.items.length) return;
+      var d = e.key === 'ArrowDown' ? 1 : -1;
+      pal.sel = (pal.sel + d + pal.items.length) % pal.items.length;
+      renderPalette();
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      var it = pal.items[pal.sel];
+      if (it && it.run) { closePalette(); it.run(); }
+    }
+  });
+  cmdkList.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('.cmdk-item') : null;
+    if (!el) return;
+    var it = pal.items[+el.getAttribute('data-i')];
+    if (it && it.run) { closePalette(); it.run(); }
+  });
+
+  /* ---------- wiki links ---------- */
+  function wikiTargets(q) {
+    q = (q || '').toLowerCase();
+    return notes.filter(function (n) {
+      return !n.deleted && n.id !== ui.activeId &&
+        (n.title || '').trim() !== '' &&
+        (n.title || '').toLowerCase().indexOf(q) !== -1;
+    }).sort(function (a, b) { return b.updatedAt - a.updatedAt; }).slice(0, 6);
+  }
+
+  function updateWikiPop() {
+    var n = getNote(ui.activeId);
+    if (!n || n.deleted || settings.view === 'preview') { hideWikiPop(); return; }
+    var caret = editorArea.selectionStart;
+    var before = editorArea.value.slice(0, caret);
+    var m = before.match(/\[\[([^\][\n]*)$/);
+    if (!m) { hideWikiPop(); return; }
+    var targets = wikiTargets(m[1].toLowerCase());
+    if (!targets.length) { hideWikiPop(); return; }
+    wikiPop.open = true;
+    wikiPop.items = targets;
+    wikiPop.sel = 0;
+    wikiPop.startIdx = caret - m[0].length;
+    wikiPop.caret = caret;
+    var html = '<div class="wp-head"><span>Link to note</span><span>\u21B5 complete · esc</span></div>';
+    targets.forEach(function (t, i) {
+      html += '<div class="wp-item' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '">' +
+        '<span>' + escapeHtml(t.title || 'Untitled') + '</span>' +
+        '<span class="wp-date">' + fmtDate(t.updatedAt) + '</span></div>';
+    });
+    wikiPopEl.innerHTML = html;
+    wikiPopEl.hidden = false;
+  }
+
+  function renderWikiSel() {
+    $$('.wp-item', wikiPopEl).forEach(function (el, i) {
+      el.classList.toggle('sel', i === wikiPop.sel);
+    });
+  }
+
+  function hideWikiPop() {
+    wikiPop.open = false;
+    wikiPopEl.hidden = true;
+  }
+
+  function completeWiki(idx) {
+    var t = wikiPop.items[idx != null ? idx : wikiPop.sel];
+    if (!t) { hideWikiPop(); return; }
+    var title = t.title || 'Untitled';
+    var insert = '[[' + title + ']]';
+    editorArea.value = editorArea.value.slice(0, wikiPop.startIdx) + insert + editorArea.value.slice(wikiPop.caret);
+    var pos = wikiPop.startIdx + insert.length;
+    editorArea.setSelectionRange(pos, pos);
+    editorArea.focus();
+    hideWikiPop();
+    markDirty();
+  }
+
+  function openWikiLink(title) {
+    title = (title || '').trim();
+    if (!title) return;
+    var target = null;
+    notes.forEach(function (n) {
+      if (!n.deleted && (n.title || '').trim().toLowerCase() === title.toLowerCase()) target = n;
+    });
+    if (target) { openNote(target.id); return; }
+    createNote({ title: title });
+    toast('Created new note \u201C' + title + '\u201D');
+  }
+
+  wikiPopEl.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  wikiPopEl.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('.wp-item') : null;
+    if (el) completeWiki(+el.getAttribute('data-i'));
+  });
+
+  /* ---------- mobile FAB ---------- */
+  fabNew.addEventListener('click', function () { createNote(); });
 
   /* ---------------- boot ---------------- */
   function init() {
@@ -1090,6 +1622,7 @@
     });
     load();
     applyTheme();
+    updateAccentMenu();
     if (settings.lastId && getNote(settings.lastId) && !getNote(settings.lastId).deleted) {
       ui.activeId = settings.lastId;
     } else {
@@ -1097,6 +1630,15 @@
       ui.activeId = first ? first.id : null;
     }
     renderAll();
+    var ver = store.get(VER_KEY);
+    if (ver !== '2') {
+      store.set(VER_KEY, '2');
+      if (ver !== null) {
+        setTimeout(function () {
+          toast('\u2728 Jotter updated to v1.1 — press Ctrl K to try the command palette', { timeout: 6500 });
+        }, 700);
+      }
+    }
   }
 
   init();

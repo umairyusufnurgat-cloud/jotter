@@ -21,15 +21,39 @@
           <span class="brand-mark" data-icon="book"></span>
           <span class="brand-name">Jotter</span>
         </div>
-        <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+        <div class="side-top-actions">
+          <button class="icon-btn" id="cmdBtn" data-icon="cmd" title="Command palette (Ctrl K)" aria-label="Command palette"></button>
+          <div class="menu-anchor">
+            <button class="icon-btn" id="accentBtn" data-icon="droplet" title="Accent colour" aria-label="Accent colour" aria-haspopup="true" aria-expanded="false"></button>
+            <div class="menu up accent-menu" id="accentMenu" hidden>
+              <button class="swatch" data-accent="indigo" style="--c:#6558d3" aria-label="Indigo" title="Indigo"></button>
+              <button class="swatch" data-accent="teal" style="--c:#0f9187" aria-label="Teal" title="Teal"></button>
+              <button class="swatch" data-accent="blue" style="--c:#2563eb" aria-label="Blue" title="Blue"></button>
+              <button class="swatch" data-accent="rose" style="--c:#d64560" aria-label="Rose" title="Rose"></button>
+              <button class="swatch" data-accent="green" style="--c:#2f9e44" aria-label="Green" title="Green"></button>
+              <button class="swatch" data-accent="amber" style="--c:#b45309" aria-label="Amber" title="Amber"></button>
+            </div>
+          </div>
+          <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme"></button>
+        </div>
       </div>
 
       <div class="side-actions">
-        <button class="btn primary block" id="newNoteBtn" data-icon="filePlus">
-          <span>New note</span><kbd>Ctrl Alt N</kbd>
-        </button>
+        <div class="new-note-wrap menu-anchor">
+          <button class="btn primary block" id="newNoteBtn" data-icon="filePlus">
+            <span>New note</span><kbd>Ctrl Alt N</kbd>
+          </button>
+          <button class="btn primary" id="templateBtn" data-icon="chevDown" aria-label="New from template" aria-haspopup="true" aria-expanded="false"></button>
+          <div class="menu" id="templateMenu" hidden>
+            <button data-tpl="journal" data-icon="calendar"><span>Today&rsquo;s journal</span></button>
+            <button data-tpl="meeting" data-icon="users"><span>Meeting notes</span></button>
+            <button data-tpl="reading" data-icon="bookOpen"><span>Reading notes</span></button>
+            <button data-tpl="project" data-icon="listIcon"><span>Project plan</span></button>
+            <button data-tpl="braindump" data-icon="zap"><span>Brain dump</span></button>
+          </div>
+        </div>
         <button class="btn ghost block" id="dailyBtn" data-icon="calendar">
-          <span>Today&rsquo;s journal</span>
+          <span>Today&rsquo;s journal</span><span class="streak" id="streakBadge" hidden></span>
         </button>
       </div>
 
@@ -59,8 +83,20 @@
           </button>
         </div>
         <div class="side-foot-row">
-          <button class="link-btn" id="exportAllBtn" data-icon="download"><span>Backup</span></button>
-          <button class="link-btn" id="importBtn" data-icon="upload"><span>Restore</span></button>
+          <div class="menu-anchor">
+            <button class="link-btn" id="backupBtn" data-icon="download"><span>Backup &#9662;</span></button>
+            <div class="menu up" id="backupMenu" hidden>
+              <button id="expJsonBtn" data-icon="download"><span>JSON backup (everything)</span></button>
+              <button id="expMdBtn" data-icon="fileText"><span>Export all as Markdown</span></button>
+            </div>
+          </div>
+          <div class="menu-anchor">
+            <button class="link-btn" id="impBtn" data-icon="upload"><span>Import &#9662;</span></button>
+            <div class="menu up" id="impMenu" hidden>
+              <button id="restoreJsonBtn" data-icon="upload"><span>Restore JSON backup</span></button>
+              <button id="importMdBtn" data-icon="fileText"><span>Import .md / .txt files</span></button>
+            </div>
+          </div>
         </div>
         <button class="link-btn danger block" id="emptyTrashBtn" hidden>Empty trash</button>
         <div class="storage-note" id="storageNote"></div>
@@ -79,7 +115,7 @@
           <button class="btn ghost" id="emptyDailyBtn" data-icon="calendar"><span>Start today&rsquo;s journal</span></button>
           <button class="btn ghost" id="clearFiltersBtn" data-icon="x" hidden><span>Clear filters</span></button>
         </div>
-        <p class="empty-hint"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> new note &nbsp;·&nbsp; <kbd>/</kbd> search &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>E</kbd> switch view</p>
+        <p class="empty-hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> commands &nbsp;·&nbsp; <kbd>N</kbd> new note &nbsp;·&nbsp; <kbd>/</kbd> search</p>
       </section>
 
       <section class="editor" id="editor" hidden>
@@ -126,6 +162,7 @@
         <div class="panes" id="panes" data-view="split">
           <textarea id="editorArea" class="editor-area" placeholder="Start writing… markdown works here ✨" aria-label="Note content" spellcheck="true"></textarea>
           <article id="previewArea" class="preview markdown-body" aria-label="Rendered preview"></article>
+          <div class="wiki-pop" id="wikiPop" hidden></div>
         </div>
 
         <footer class="statusbar">
@@ -136,8 +173,41 @@
     </main>
   </div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <!-- ======================= COMMAND PALETTE ======================= -->
+  <div class="cmdk-overlay" id="cmdkOverlay" hidden>
+    <div class="cmdk" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div class="cmdk-input-row">
+        <span data-icon="search"></span>
+        <input id="cmdkInput" placeholder="Search notes or run a command…" autocomplete="off" spellcheck="false" />
+        <kbd>Esc</kbd>
+      </div>
+      <div class="cmdk-list" id="cmdkList" role="listbox"></div>
+      <div class="cmdk-foot">
+        <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+        <span><kbd>↵</kbd> select</span>
+        <span><kbd>Esc</kbd> close</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= MOBILE FAB + DROP ZONE + TOAST ======================= -->
+  <button class="fab" id="fabNew" data-icon="plusL" aria-label="New note"></button>
+
+  <div class="drop-overlay" id="dropOverlay" hidden>
+    <div class="drop-card">
+      <span data-icon="upload"></span>
+      <p>Drop to import</p>
+      <span>.md files become notes · .json restores a backup</span>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span class="t-msg" id="toastMsg"></span>
+    <button class="t-act" id="toastAct" hidden></button>
+  </div>
+
   <input type="file" id="importFile" accept="application/json,.json" hidden />
+  <input type="file" id="importMdFile" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple hidden />
 
   <script src="markdown.js"></script>
   <script src="app.js"></script>

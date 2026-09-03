@@ -44,6 +44,12 @@
       return keep('<code>' + escapeHtml(c) + '</code>');
     });
 
+    // 2b. wiki links  [[Note Title]]  (resolved by the app)
+    text = text.replace(/\[\[([^\][\n]+?)\s*\]\]/g, function (m, title) {
+      var t = title.trim();
+      return keep('<a href="#" class="wiki-link" data-wiki="' + escapeHtml(t) + '">' + escapeHtml(t) + '</a>');
+    });
+
     // 3. images  ![alt](url)
     text = text.replace(/!\[([^\]]*)\]\(\s*(\S+)(?:\s+["'](.*?)["'])?\s*\)/g, function (m, alt, url, title) {
       var t = title ? ' title="' + escapeHtml(title) + '"' : '';

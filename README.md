@@ -20,19 +20,28 @@
 
 - 📝 **Markdown everywhere** — headings, **bold**, *italic*, tables, code blocks, blockquotes, task lists…
 - ✅ **Interactive checkboxes** — tick a task in the preview and the markdown source updates itself
+- ⌘ **Command palette** — `Ctrl`/`⌘` + `K` to fuzzy-jump to any note or run any action from one place
+- 🔗 **Wiki-links** — type `[[` to link notes together with autocomplete; clicking a link opens the note or creates it
 - 🪓 **Split view** — write on the left, see the rendered result on the right (scroll-synced)
+- 🧩 **Templates** — Today's journal, Meeting notes, Reading notes, Project plan, Brain dump
 - 🏷️ **Tags** — organise notes with tag chips and filter the sidebar by tag
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags
-- 📅 **Today's journal** — one click creates a dated daily entry with a journal template
-- 🌗 **Light & dark themes** — follows your system, switchable
+- 📅 **Today's journal** — one click creates a dated daily entry with a journal template (and a 🔥 streak counter)
+- 🌗 **Light & dark themes** + six accent colours
 - 💾 **Private by design** — notes are stored in *your browser's* local storage; nothing ever leaves your device
-- 🔄 **Backup & restore** — export all notes to a JSON file; restore merges them back (newest edit wins)
+- 🔄 **Backup & restore** — export all notes to JSON (or as one Markdown file); restore merges them back; drag & drop `.md` files to import them as notes
 - ⬇️ **Export any note** as `.md`, or copy its markdown to the clipboard
 - 🖨️ **Print / save as PDF** with clean print styles
-- 📱 **Responsive + installable** — works great on phones; install it as a PWA and it works offline
+- 📱 **Responsive + installable** — works great on phones (with a one-tap new-note button); install it as a PWA and it works offline
 - ⌨️ **Keyboard shortcuts** for everything
 - 🗑️ **Trash** — deleted notes rest for 30 days before being purged
+
+## 🔗 Link your notes (wiki-links)
+
+Turn your notebook into a personal wiki: type `[[` while writing and pick a note from the autocomplete.
+`See [[Meeting — 3 Sep 2026]] for context` becomes a clickable link. A **dashed underline** means the note
+doesn't exist yet — clicking it creates the note on the spot.
 
 ## 🚀 Launch it
 
@@ -69,15 +78,17 @@ python3 -m http.server 8000
 
 | Shortcut | Action |
 | --- | --- |
+| `Ctrl`/`⌘` + `K` | Command palette (search notes & run actions) |
 | `N` | New note (when not typing) |
 | `Ctrl`/`⌘` + `Alt` + `N` | New note (from anywhere) |
 | `/` or `Ctrl`/`⌘` + `F` | Focus search |
 | `Ctrl`/`⌘` + `E` | Cycle view: Edit → Split → Preview |
 | `Ctrl`/`⌘` + `B` / `I` | Bold / italic (wraps selection) |
+| `[[` | Insert a wiki-link (autocomplete popup) |
 | `Tab` / `Shift + Tab` | Indent / outdent lines in the editor |
 | `Enter` | Continue lists & checkboxes automatically |
 | `Ctrl`/`⌘` + `S` | Force save |
-| `Esc` | Close menus / sidebar |
+| `Esc` | Close menus / palette / sidebar |
 
 ## 📝 Markdown support
 
@@ -103,13 +114,16 @@ So **use Backup regularly** (sidebar → *Backup*) and keep the JSON file somewh
 ```
 ├── index.html            # app shell
 ├── styles.css            # full design system (light + dark, responsive, print)
-├── markdown.js           # markdown → HTML renderer
-├── app.js                # app logic (state, editor, storage, export…)
+├── markdown.js           # markdown → HTML renderer (incl. wiki-links)
+├── app.js                # app logic (state, editor, palette, storage, export…)
 ├── service-worker.js     # offline cache (bump CACHE when you change files)
 ├── manifest.webmanifest  # PWA manifest
 ├── assets/               # icon + banner
-└── .devcontainer/        # Codespaces config
+├── .devcontainer/        # Codespaces config
+└── CHANGELOG.md          # release notes
 ```
+
+See [CHANGELOG.md](CHANGELOG.md) for what's new in each version.
 
 ## 🤝 Contributing
 

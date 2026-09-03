@@ -1,8 +1,10 @@
 /* ============================================================
    Jotter service worker — offline support + installability
+   Strategy: network-first with cache fallback, so updates
+   arrive immediately and the app still works offline.
    Bump CACHE version whenever you change app files.
    ============================================================ */
-const CACHE = 'jotter-v1';
+const CACHE = 'jotter-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -15,7 +17,10 @@ const ASSETS = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
+      .catch(() => caches.open(CACHE).then((c) => c.addAll(ASSETS)))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -30,23 +35,23 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  if (!req.url.startsWith(self.location.origin)) return;
 
-  // Navigation: network-first so updates arrive, cache fallback when offline.
-  if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req)
-        .then((res) => {
+  e.respondWith(
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy));
-          return res;
+        }
+        return res;
+      })
+      .catch(() =>
+        caches.match(req, { ignoreSearch: true }).then((hit) => {
+          if (hit) return hit;
+          if (req.mode === 'navigate') return caches.match('./');
+          return new Response('Offline', { status: 503, statusText: 'Offline' });
         })
-        .catch(() => caches.match(req).then((r) => r || caches.match('./')))
-    );
-    return;
-  }
-
-  // Assets: cache-first.
-  e.respondWith(
-    caches.match(req).then((hit) => hit || fetch(req))
+      )
   );
 });
