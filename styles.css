@@ -1391,17 +1391,6 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
 /* ============================================================
    v1.11 — folders: sidebar section, card chips, move modal
    ============================================================ */
-.folders-sec { padding: 2px 0 6px; border-bottom: 1px solid var(--border); }
-.folders-head {
-  display: flex; align-items: center; gap: 7px; width: 100%;
-  background: transparent; border: 0; cursor: pointer;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text-muted); padding: 5px 8px; border-radius: 7px;
-}
-.folders-head:hover { background: var(--bg-hover); color: var(--text); }
-.fh-ico svg, .fh-chev svg { display: block; }
-.fh-chev { margin-left: auto; transition: transform .12s ease; }
-.folders-sec.folded .fh-chev { transform: rotate(-90deg); }
 .folders-list { display: flex; flex-direction: column; gap: 1px; padding: 2px 0 4px; }
 .folder-row {
   display: flex; align-items: center; gap: 8px; width: 100%;
@@ -1419,12 +1408,6 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
   background: var(--bg-hover); border-radius: 99px; padding: 1px 7px;
 }
 .folder-row.active .fr-count { background: transparent; color: var(--accent); }
-.folder-row.drag-over {
-  outline: 2px dashed var(--accent); outline-offset: -2px;
-  background: var(--accent-soft);
-}
-.note-card[draggable="true"] { cursor: grab; }
-.note-card[draggable="true"]:active { cursor: grabbing; }
 
 /* folder chip on note cards */
 .nc-folder {
@@ -1498,20 +1481,6 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
 }
 .loc-spacer { flex: 1; }
 
-/* quick-create button on folder rows (desktop hover; mobile uses the location bar's +) */
-.fr-plus {
-  display: none; flex: none;
-  width: 20px; height: 20px; line-height: 1;
-  border: 1px solid var(--border-strong); border-radius: 6px;
-  background: var(--bg-elev); color: var(--text-muted);
-  font-size: 14px; cursor: pointer; padding: 0;
-  align-items: center; justify-content: center;
-}
-.fr-plus:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-@media (min-width: 641px) {
-  .folder-row { position: relative; }
-  .folder-row:hover .fr-plus, .folder-row:focus-within .fr-plus { display: inline-flex; }
-}
 
 /* cards: no text-selection callouts during long-press / drag */
 .note-card { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -1519,4 +1488,39 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
 @media (max-width: 640px) {
   .loc-bar { padding: 2px 4px 6px; gap: 5px; }
   .loc-name { font-size: 13px; }
+}
+
+
+/* ============================================================
+   v1.13 — the Folders tab: full management view
+   ============================================================ */
+.folders-view { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.fv-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 2px 2px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+}
+.fv-title { font-size: 13.5px; }
+.folders-view .folders-list { flex: 1; overflow-y: auto; }
+.folder-row.quick { color: var(--text-muted); }
+.folder-row.quick.cur, .folder-row.cur { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.folder-row.quick .fr-ico, .folder-row.cur .fr-ico { color: var(--accent); }
+.folder-row.quick:hover { color: var(--text); }
+.fr-more {
+  flex: none; width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 6px; background: transparent;
+  color: var(--text-muted); font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
+}
+.fr-more:hover { background: var(--bg-hover); color: var(--text); }
+.fv-empty { text-align: center; color: var(--text-muted); padding: 34px 10px; }
+.fv-empty svg { opacity: .45; margin-bottom: 8px; }
+.fv-empty p { font-size: 12.5px; line-height: 1.6; margin: 0; }
+
+/* four tabs in the sidebar bottom seg — keep them fitting on phones */
+@media (max-width: 640px) {
+  .side-bottom .seg-btn { padding: 7px 6px; font-size: 11.5px; gap: 5px; }
+}
+@media (max-width: 380px) {
+  .side-bottom .seg-btn span:not(.count) { display: none; } /* icon-only: labels still in title+aria */
+  .side-bottom .seg-btn { padding: 7px 9px; }
 }

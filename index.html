@@ -77,14 +77,6 @@
           <option value="title">Title A–Z</option>
         </select>
       </div>
-
-      <div class="folders-sec" id="foldersSec" hidden>
-        <button class="folders-head" id="foldersHead" aria-expanded="true">
-          <span class="fh-ico" data-icon="folder"></span><span class="fh-label">Folders</span>
-          <span class="fh-chev" data-icon="chevDown"></span>
-        </button>
-        <div class="folders-list" id="foldersList"></div>
-      </div>
       <div class="cal-panel" id="calPanel" hidden>
         <div class="cal-head">
           <button class="icon-btn" id="calPrevBtn" data-icon="chevLeft" aria-label="Previous month"></button>
@@ -94,6 +86,14 @@
         </div>
         <div class="cal-grid" id="calGrid"></div>
         <div class="cal-daybox" id="calDay"></div>
+      </div>
+
+      <div class="folders-view" id="foldersPanel" hidden>
+        <div class="fv-head">
+          <b class="fv-title">Folders</b>
+          <button class="btn small primary" id="newFolderBtn" data-icon="folderPlus"><span>New folder</span></button>
+        </div>
+        <div class="folders-list" id="foldersList"></div>
       </div>
 
       <div class="tag-filters" id="tagFilters"></div>
@@ -111,9 +111,10 @@
 
       <div class="side-bottom">
         <div class="seg">
-          <button class="seg-btn" id="notesViewBtn" data-icon="file"><span>Notes</span></button>
-          <button class="seg-btn" id="calViewBtn" data-icon="calendar"><span>Calendar</span></button>
-          <button class="seg-btn" id="trashViewBtn" data-icon="trash">
+          <button class="seg-btn" id="notesViewBtn" data-icon="file" title="Notes"><span>Notes</span></button>
+          <button class="seg-btn" id="foldersViewBtn" data-icon="folder" title="Folders"><span>Folders</span></button>
+          <button class="seg-btn" id="calViewBtn" data-icon="calendar" title="Calendar"><span>Calendar</span></button>
+          <button class="seg-btn" id="trashViewBtn" data-icon="trash" title="Trash">
             <span>Trash</span><span class="count" id="trashCount" hidden></span>
           </button>
         </div>
@@ -453,7 +454,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="calendar"></span><div class="bg-txt"><b>Today&rsquo;s journal</b> &mdash; dated entry with a journal template; the &#128293; streak appears after 2+ days in a row</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="search"></span><div class="bg-txt"><b>Search</b> &mdash; live search across titles, text and tags (<kbd>/</kbd>); matches are highlighted</div></div>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tag chips</b> &mdash; click to filter by a tag; <b>right-click</b> to rename it or remove it from all notes</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; file notes into folders: <b>right-click a note card</b> (long-press on touch) for one-click moves, or drag a card onto a folder, or More &#9662; &rarr; Move to folder. The list shows unfiled notes; the location bar above it shows where you are and how to get back</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; the <b>Folders</b> tab (sidebar bottom) manages everything: create, rename, open, or delete folders with the &#8942; menu on each row. File notes via <b>right-click / long-press</b> on a card, or More &#9662; &rarr; Move to folder. The location bar above the notes list shows where you are</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days)</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="panelLeft"></span><div class="bg-txt"><b>Resize / hide sidebar</b> &mdash; drag the sidebar&rsquo;s right edge to resize it; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or use the &#9776; toolbar button to hide it entirely</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="graph"></span><div class="bg-txt"><b>Note graph</b> &mdash; your notes as a map of [[wiki-links]]; drag, zoom and pan it, click a bubble to open the note</div></div>
@@ -484,7 +485,16 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.12 <span class="pill">current</span></h4>
+            <h4>v1.13 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128193; <b>A dedicated Folders tab</b> (sidebar bottom: Notes &#183; <b>Folders</b> &#183; Calendar &#183; Trash) &mdash; all your folders with counts, quick rows for <b>All notes</b> and <b>Unfiled</b>, and a <b>New folder</b> button. Empty folders are now supported: set up your structure first, file notes later</li>
+              <li>&#8942; <b>Every folder row has a visible &#8942; menu</b> &mdash; open, new note inside, rename, and <b>delete</b> (deleting unfiles its notes, nothing is lost). No more hidden right-click: it works with a mouse, on touch, everywhere. Right-clicking a folder still works as a shortcut</li>
+              <li>&#9729;&#65039; <b>Folders now sync and travel</b> &mdash; your folder structure rides with GitHub sync (with deletion tombstones) and JSON backups, including empty folders</li>
+              <li>&#129514; Streamlined: the cramped inline folders strip in the Notes tab is gone (the tab replaces it), and card drag-and-drop gave way to the right-click / long-press menu that works on every device</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.12 &mdash; folders, naturally</h4>
             <ul>
               <li>&#128205; <b>Location bar</b> &mdash; a bar above the notes list always shows where you are (<b>Notes</b> home, a folder, or All notes) with a count, a <b>&#9664; back</b> button, and a <b>+</b> to create a note right inside the folder you&rsquo;re viewing</li>
               <li>&#128433;&#65039; <b>Right-click any note card</b> (or <b>long-press</b> it on touch) for quick actions &mdash; <b>one-click moves</b> to your folders, pin, star, duplicate, move to trash &mdash; no need to open the note first</li>

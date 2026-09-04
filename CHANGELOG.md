@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.13 — the Folders tab 🗂
+
+- 🗂 **A dedicated Folders tab** in the sidebar (Notes · **Folders** · Calendar · Trash): all your folders with live counts, quick rows for **Unfiled notes** and **All notes**, and a **New folder** button
+- ⋮ **Manage folders visibly** — every folder row has a **⋯ menu**: open it, create a note inside, rename it, or **delete it** (its notes are kept and unfiled). Works identically with a mouse or on touch — no more hidden right-click (though right-clicking a folder still works)
+- 📭 **Empty folders** — create your folder structure first, file notes later; folders no longer vanish when their last note leaves. They're stored as a first-class ordered list
+- ☁️ **Folders sync & travel** — your folder structure (including empty folders) rides with GitHub sync; deletions propagate via tombstones so a folder deleted on one device stays deleted. JSON backups include folders too
+- 🧹 Streamlined: the cramped inline folders strip in the Notes tab is gone (the tab replaces it); note-card drag-and-drop onto folders was removed in favour of the right-click / long-press menu, which works on every device
+
 ## v1.12 — folders, naturally 🧭
 
 - 🧭 **Location bar** — a bar above the notes list always shows where you are: **Notes** (home), the folder you're in, or **All notes**, with a live count, a **◀ back** button, and — inside a folder — a **+** to create a note right there. No more "where am I / how do I get back?"
