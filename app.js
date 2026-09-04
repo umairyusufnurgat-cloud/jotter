@@ -195,6 +195,8 @@
       locCount = $('#locCount'), locNewBtn = $('#locNewBtn');
   var syncTokenInput = $('#syncTokenInput'), syncSaveBtn = $('#syncSaveBtn'), syncStatus = $('#syncStatus');
   var syncNowBtn = $('#syncNowBtn'), syncAutoChk = $('#syncAutoChk'), syncDisconnectBtn = $('#syncDisconnectBtn'), aboutInfo = $('#aboutInfo');
+  var confirmOverlay = $('#confirmOverlay'), confirmTitle = $('#confirmTitle'), confirmMsg = $('#confirmMsg'),
+      confirmOkBtn = $('#confirmOkBtn'), confirmCancelBtn = $('#confirmCancelBtn'), confirmCloseBtn = $('#confirmCloseBtn');
   var promptOverlay = $('#promptOverlay'), promptTitle = $('#promptTitle'), promptInput = $('#promptInput');
   var promptOkBtn = $('#promptOkBtn'), promptCancelBtn = $('#promptCancelBtn'), promptCloseBtn = $('#promptCloseBtn');
   var ctxMenu = $('#ctxMenu'), outlineBtn = $('#outlineBtn'), outlineMenu = $('#outlineMenu');
@@ -1560,6 +1562,7 @@
       else if (!findBar.hidden) closeFind();
       else if (!setLockOverlay.hidden) closeSetLock();
       else if (!folderOverlay.hidden) closeFolderPicker();
+      else if (!confirmOverlay.hidden) closeConfirm();
       else if (!promptOverlay.hidden) closePrompt();
       else if (!histOverlay.hidden) closeHist();
       else if (!statsOverlay.hidden) closeStats();
@@ -2246,7 +2249,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.13 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.13.1 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2323,6 +2326,29 @@
     closePrompt();
     if (cb) cb(v);
   }
+
+  /* confirm modal — no timing traps, no armed buttons */
+  var confirmCb = null;
+  function openConfirm(title, msg, okLabel, fn) {
+    confirmTitle.textContent = title;
+    confirmMsg.textContent = msg;
+    confirmOkBtn.textContent = okLabel || 'OK';
+    confirmCb = fn;
+    confirmOverlay.hidden = false;
+    setTimeout(function () { confirmCancelBtn.focus(); }, 0); // safe default
+  }
+  function closeConfirm() { confirmOverlay.hidden = true; confirmCb = null; }
+  confirmOkBtn.addEventListener('click', function () {
+    var cb = confirmCb;
+    closeConfirm();
+    if (cb) cb();
+  });
+  confirmCancelBtn.addEventListener('click', closeConfirm);
+  confirmCloseBtn.addEventListener('click', closeConfirm);
+  confirmOverlay.addEventListener('click', function (e) { if (e.target === confirmOverlay) closeConfirm(); });
+  confirmOverlay.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); confirmOkBtn.click(); }
+  });
   promptOkBtn.addEventListener('click', submitPrompt);
   promptCancelBtn.addEventListener('click', closePrompt);
   promptCloseBtn.addEventListener('click', closePrompt);
@@ -2376,12 +2402,10 @@
 
   /* ---------- tag tools (rename / delete everywhere) ---------- */
   var ctxTarget = null;
-  var ctxArmed = false;
-  var ctxKind = 'tag'; // 'tag' | 'folder'
+  var ctxKind = 'tag'; // 'tag' | 'folder' | 'card'
   function showCtx(tag, x, y) {
     ctxTarget = tag;
     ctxKind = 'tag';
-    ctxArmed = false;
     ctxMenu.innerHTML =
       '<button id="ctxRename">' + ICONS.pencil + '<span>Rename \u201C' + escapeHtml(tag) + '\u201D\u2026</span></button>' +
       '<button id="ctxDelete" class="danger">' + ICONS.trashS + '<span>Delete tag from all notes</span></button>';
@@ -2421,16 +2445,21 @@
     }
     var d = e.target.closest ? e.target.closest('#ctxDelete') : null;
     if (d) {
-      if (ctxArmed) {
-        ctxMenu.hidden = true;
-        if (ctxKind === 'folder') deleteFolder(ctxTarget);
-        else deleteTagEverywhere(ctxTarget);
-        return;
+      ctxMenu.hidden = true;
+      if (ctxKind === 'folder') {
+        var f = ctxTarget;
+        var count = notes.filter(function (n) { return n.folder === f; }).length;
+        openConfirm('Delete folder',
+          'Delete \u201C' + f + '\u201D? ' + (count === 0 ? 'It is empty.' :
+            count + ' note' + (count === 1 ? ' will be removed from the folder and kept' : 's will be removed from the folder and kept') + ' \u2014 nothing is deleted.'),
+          'Delete folder', function () { deleteFolder(f); });
+      } else {
+        var t = ctxTarget;
+        var tc = notes.filter(function (n) { return n.tags.indexOf(t) !== -1; }).length;
+        openConfirm('Delete tag',
+          'Remove #' + t + ' from ' + tc + ' note' + (tc === 1 ? '' : 's') + '? The notes themselves are kept.',
+          'Remove tag', function () { deleteTagEverywhere(t); });
       }
-      ctxArmed = true;
-      d.classList.add('armed');
-      d.innerHTML = '<span>Really delete \u201C' + escapeHtml(ctxTarget) + '\u201D everywhere?</span>';
-      setTimeout(function () { ctxMenu.hidden = true; }, 2600);
     }
   });
 
@@ -2719,7 +2748,6 @@
   function showCtxFolder(f, x, y) {
     ctxTarget = f;
     ctxKind = 'folder';
-    ctxArmed = false;
     ctxMenu.innerHTML =
       '<button data-fa="open">' + ICONS.folder + '<span>Open \u201C' + escapeHtml(f) + '\u201D</span></button>' +
       '<button data-fa="newnote">' + ICONS.filePlus + '<span>New note inside</span></button>' +
@@ -2740,7 +2768,7 @@
   function showCtxCard(id, x, y) {
     var n = getNote(id);
     if (!n || n.deleted) return;
-    ctxTarget = id; ctxKind = 'card'; ctxArmed = false;
+    ctxTarget = id; ctxKind = 'card';
     var folders = folderNames().filter(function (f) { return f !== n.folder; }).slice(0, 6);
     var html = folders.map(function (f) {
       return '<button data-ca="move" data-f="' + escapeHtml(f) + '">' + ICONS.folderS + '<span>Move to \u201C' + escapeHtml(f) + '\u201D</span></button>';
@@ -3699,11 +3727,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '15') {
-      store.set(VER_KEY, '14');
+    if (ver !== '16') {
+      store.set(VER_KEY, '16');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.13 \u2014 redesigned folders: a dedicated Folders tab with create / rename / delete on every device', { timeout: 8000 });
+          toast('\u2728 Jotter updated to v1.13.1 \u2014 folder + tag deletion now uses a clear confirmation dialog (no more timing-sensitive double-click)', { timeout: 8000 });
         }, 700);
       }
     }

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.13.1 — deletion confirmation fix ⚠️
+
+- ⚠️ **Fixed: deleting folders and tags could feel broken** — the confirmation was a timing-sensitive "click again within 2.6s" pattern on the menu item; hesitate a moment and the menu quietly closed and nothing was deleted. Folder and tag deletion now opens a **real confirmation dialog**: it states exactly what will happen ("3 notes will be removed from the folder and kept — nothing is deleted"), it waits for you indefinitely, Esc cancels, and Cancel is the focused safe default
+- Applies everywhere the folder/tag menu can come from: the ⋯ button, right-click, and the command palette
+
 ## v1.13 — the Folders tab 🗂
 
 - 🗂 **A dedicated Folders tab** in the sidebar (Notes · **Folders** · Calendar · Trash): all your folders with live counts, quick rows for **Unfiled notes** and **All notes**, and a **New folder** button
