@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.15 — linked notes: embeds & backlinks 📎
+- **Note embeds** — `{{Note title}}` on its own line renders that note live inside the preview as a card (title + open button + full content); type `{{` for the same autocomplete as `[[`; nested embeds expand a couple of levels deep; self-embeds are detected and skipped; missing titles are one click from creation; locked notes show a locked placeholder, never their text
+- **Backlinks bar** — "Linked from" chips above the statusbar list every note that links/embeds the current note; click to jump
+- Embeds are read-only: task checkboxes inside them are display-only (no accidental edits to the embedded note)
+- The note graph draws edges for embeds as well as wiki-links
+
 ## v1.14 — folders, simplified 🏠
 - **Folders live in the sidebar, always** — the separate Folders tab is gone; folders sit under search & sort with live counts, collapsible via the header caret
 - **Drag & drop filing** — drag a note card onto a folder to file it, onto “Unfiled notes” to unfile it, onto the Trash button to trash it (targets glow on hover; touch devices keep the ⋯ menu)

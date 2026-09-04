@@ -213,6 +213,7 @@
   var copyMdBtn = $('#copyMdBtn'), trashCurrentBtn = $('#trashCurrentBtn');
   var titleInput = $('#titleInput'), chips = $('#chips'), tagInput = $('#tagInput');
   var panes = $('#panes'), editorArea = $('#editorArea'), previewArea = $('#previewArea');
+  var backlinksBar = $('#backlinksBar'), blChips = $('#blChips');
   var statsInfo = $('#statsInfo'), saveStatus = $('#saveStatus');
 
   /* ---------------- data helpers ---------------- */
@@ -607,6 +608,7 @@
     });
     renderPreview();
     updateStats();
+    renderBacklinks();
     saveStatus.textContent = 'Saved';
   }
 
@@ -642,6 +644,7 @@
       : '<p>' + escapeHtml(val) + '</p>';
     if (!val.trim()) previewArea.innerHTML = '<p class="placeholder-line">Nothing to preview yet…</p>';
     markMissingWikiLinks();
+    expandEmbeds(previewArea, 2);
     if (!findBar.hidden) queueFind();
   }
 
@@ -653,6 +656,82 @@
       });
       if (!ok) a.classList.add('missing');
     });
+  }
+
+  /* ---------- note embeds  {{Title}} — another note rendered inline ---------- */
+  function findNoteByTitle(title) {
+    title = (title || '').trim().toLowerCase();
+    if (!title) return null;
+    var target = null;
+    notes.forEach(function (n) {
+      if (!n.deleted && (n.title || '').trim().toLowerCase() === title) target = n;
+    });
+    return target;
+  }
+
+  function renderNoteBody(n) {
+    var text = n.body || '';
+    if (n.locked) {
+      var sess = unlockSess[n.id];
+      if (!sess) return '<p class="placeholder-line">\uD83D\uDD12 This note is locked — open it and enter its PIN to see it here.</p>';
+      text = sess.text;
+    }
+    return window.JotterMD ? window.JotterMD.render(text) : '<p>' + escapeHtml(text) + '</p>';
+  }
+
+  function expandEmbeds(root, depth) {
+    $$('.md-embed', root).forEach(function (el) {
+      if (el.getAttribute('data-expanded')) return;
+      el.setAttribute('data-expanded', '1');
+      var title = (el.getAttribute('data-embed') || '').trim();
+      if (!title) { el.remove(); return; }
+      var active = getNote(ui.activeId);
+      var target = findNoteByTitle(title);
+      if (!target) {
+        el.classList.add('missing');
+        el.innerHTML = '<div class="embed-head"><span class="embed-title">\uD83D\uDCCE ' + escapeHtml(title) + '</span>' +
+          '<span class="embed-hint">not found — click to create it</span></div>';
+        return;
+      }
+      if (active && target.id === active.id) {
+        el.classList.add('circular');
+        el.innerHTML = '<div class="embed-head"><span class="embed-title">\uD83D\uDD01 ' + escapeHtml(title) + '</span>' +
+          '<span class="embed-hint">this note embeds itself — skipped</span></div>';
+        return;
+      }
+      el.setAttribute('data-open', target.id);
+      el.innerHTML = '<div class="embed-head"><span class="embed-title">\uD83D\uDCC4 ' + escapeHtml(target.title || 'Untitled') + '</span>' +
+        '<button class="embed-open" data-open="' + target.id + '" title="Open this note">open \u2197</button></div>' +
+        '<div class="embed-body markdown-body">' + renderNoteBody(target) + '</div>';
+      // embeds are read-only views: no interactive task checkboxes inside them
+      $$('input[type="checkbox"][data-task]', el).forEach(function (cb) {
+        cb.removeAttribute('data-task');
+        cb.disabled = true;
+      });
+      if (depth > 0) expandEmbeds($('.embed-body', el) || el, depth - 1);
+    });
+  }
+
+  blChips.addEventListener('click', function (e) {
+    var c = e.target.closest ? e.target.closest('[data-open]') : null;
+    if (c) openNote(c.getAttribute('data-open'));
+  });
+
+  /* ---------- backlinks: which notes link to this one ---------- */
+  function renderBacklinks() {
+    var n = getNote(ui.activeId);
+    var title = n && !n.deleted ? (n.title || '').trim() : '';
+    if (!title) { backlinksBar.hidden = true; return; }
+    var esc = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var re = new RegExp('(\\[\\[|\\{\\{)\\s*' + esc + '\\s*(\\]\\]|\\}\\})', 'i');
+    var list = notes.filter(function (x) {
+      return !x.deleted && x.id !== n.id && re.test(x.body || '');
+    }).sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+    if (!list.length) { backlinksBar.hidden = true; return; }
+    backlinksBar.hidden = false;
+    blChips.innerHTML = list.slice(0, 10).map(function (x) {
+      return '<button class="bl-chip" data-open="' + x.id + '" title="Open this note">' + escapeHtml(x.title || 'Untitled') + '</button>';
+    }).join('') + (list.length > 10 ? '<span class="bl-more">+' + (list.length - 10) + ' more</span>' : '');
   }
 
   function updateStats() {
@@ -687,6 +766,7 @@
   }
 
   function createNote(opts) {
+    if (dirty) saveActive(); // flush unsaved edits before the editor switches to the new note
     opts = opts || {};
     var now = Date.now();
     var note = {
@@ -725,6 +805,7 @@
   }
 
   function openNote(id) {
+    if (dirty && id !== ui.activeId) saveActive(); // flush unsaved edits — a fast note switch must never lose a keystroke
     var n = getNote(id);
     if (!n) return;
     ui.activeId = id;
@@ -866,6 +947,23 @@
 
   /* task checkbox toggling inside the preview */
   previewArea.addEventListener('click', function (e) {
+    var eo = e.target.closest ? e.target.closest('.embed-open') : null;
+    if (eo) {
+      e.preventDefault();
+      openNote(eo.getAttribute('data-open') || '');
+      return;
+    }
+    var emb = e.target.closest ? e.target.closest('.md-embed') : null;
+    if (emb) {
+      if (emb.classList.contains('missing')) {
+        e.preventDefault();
+        var t = (emb.getAttribute('data-embed') || '').trim();
+        if (t) { createNote({ title: t }); toast('Created new note \u201C' + t + '\u201D'); }
+        return;
+      }
+      var nid = emb.getAttribute('data-open');
+      if (nid) { e.preventDefault(); openNote(nid); return; } // click the embed card itself to open it
+    }
     var wl = e.target.closest ? e.target.closest('a.wiki-link') : null;
     if (wl) {
       e.preventDefault();
@@ -2050,15 +2148,18 @@
     var caret = editorArea.selectionStart;
     var before = editorArea.value.slice(0, caret);
     var m = before.match(/\[\[([^\][\n]*)$/);
+    var isEmbed = false;
+    if (!m) { m = before.match(/\{\{([^{}\n]*)$/); if (m) isEmbed = true; }
     if (!m) { hideWikiPop(); return; }
     var targets = wikiTargets(m[1].toLowerCase());
     if (!targets.length) { hideWikiPop(); return; }
     wikiPop.open = true;
+    wikiPop.mode = isEmbed ? 'embed' : 'link';
     wikiPop.items = targets;
     wikiPop.sel = 0;
     wikiPop.startIdx = caret - m[0].length;
     wikiPop.caret = caret;
-    var html = '<div class="wp-head"><span>Link to note</span><span>\u21B5 complete · esc</span></div>';
+    var html = '<div class="wp-head"><span>' + (isEmbed ? 'Embed note' : 'Link to note') + '</span><span>\u21B5 complete · esc</span></div>';
     targets.forEach(function (t, i) {
       html += '<div class="wp-item' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '">' +
         '<span>' + escapeHtml(t.title || 'Untitled') + '</span>' +
@@ -2083,7 +2184,7 @@
     var t = wikiPop.items[idx != null ? idx : wikiPop.sel];
     if (!t) { hideWikiPop(); return; }
     var title = t.title || 'Untitled';
-    var insert = '[[' + title + ']]';
+    var insert = (wikiPop.mode === 'embed' ? '{{' + title + '}}' : '[[' + title + ']]');
     editorArea.value = editorArea.value.slice(0, wikiPop.startIdx) + insert + editorArea.value.slice(wikiPop.caret);
     var pos = wikiPop.startIdx + insert.length;
     editorArea.setSelectionRange(pos, pos);
@@ -2243,7 +2344,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.14 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.15 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -3251,9 +3352,9 @@
     });
     var seen = {}, links = [];
     live.forEach(function (n) {
-      var re = /\[\[([^\[\]]+)\]\]/g, m;
+      var re = /\[\[([^\[\]]+)\]\]|\{\{([^{}\n]+)\}\}/g, m;
       while ((m = re.exec(String(n.body || '')))) {
-        var t = m[1].trim().toLowerCase();
+        var t = (m[1] || m[2] || '').trim().toLowerCase();
         var target = byTitle[t];
         if (!target || target.id === n.id) continue;
         var key = n.id < target.id ? n.id + '~' + target.id : target.id + '~' + n.id;
@@ -3797,11 +3898,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '17') {
-      store.set(VER_KEY, '17');
+    if (ver !== '18') {
+      store.set(VER_KEY, '18');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.14 \u2014 folders now live right in the sidebar, with drag & drop filing and Recover all / Delete all in Trash', { timeout: 8000 });
+          toast('\u2728 Jotter updated to v1.15 \u2014 note embeds ({{Title}}) render other notes inline, and a backlinks bar shows who links to the note you\u2019re reading', { timeout: 8000 });
         }, 700);
       }
     }

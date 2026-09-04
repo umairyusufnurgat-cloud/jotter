@@ -64,11 +64,15 @@ Your notes are stored as a **secret gist** on your own account — unlisted, acc
 
 > 🔑 Real user accounts are on the roadmap — the options and trade-offs are written up in [ACCOUNTS.md](ACCOUNTS.md).
 
-## 🔗 Link your notes (wiki-links)
+## 🔗 Link your notes (wiki-links, embeds & backlinks)
 
 Turn your notebook into a personal wiki: type `[[` while writing and pick a note from the autocomplete.
 `See [[Meeting — 3 Sep 2026]] for context` becomes a clickable link. A **dashed underline** means the note
 doesn't exist yet — clicking it creates the note on the spot.
+
+Type `{{` and pick a note to **embed** it: the note's content renders live inside your preview as a neat
+card (open it with one click). When other notes link to the one you're reading, a **Linked from** bar
+appears above the status bar — click any chip to jump there. Embeds also draw edges in the note graph.
 
 ## 🚀 Launch it
 

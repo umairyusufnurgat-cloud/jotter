@@ -246,6 +246,12 @@
           <div class="wiki-pop" id="wikiPop" hidden></div>
         </div>
 
+        <div class="backlinks" id="backlinksBar" hidden>
+          <span class="bl-ico" data-icon="link"></span>
+          <span class="bl-label">Linked from</span>
+          <div class="bl-chips" id="blChips"></div>
+        </div>
+
         <footer class="statusbar">
           <span class="sb-folder" id="sbFolder" hidden></span>
           <span id="statsInfo">0 words · 0 characters</span>
@@ -469,7 +475,8 @@
           <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; always visible in the sidebar (collapse them with the caret): create with the <b>+</b>, rename, open, or delete folders with the &#8942; menu on each row. File notes by <b>dragging a card onto a folder</b>, via <b>right-click / long-press</b> on a card, or More &#9662; &rarr; Move to folder. The location bar above the notes list shows where you are</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days). In Trash, <b>Recover all</b> and <b>Delete all</b> sit right at the top &mdash; and you can drag a note onto the Trash button to throw it away</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="panelLeft"></span><div class="bg-txt"><b>Resize / hide sidebar</b> &mdash; drag the sidebar&rsquo;s right edge to resize it; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or use the &#9776; toolbar button to hide it entirely</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="graph"></span><div class="bg-txt"><b>Note graph</b> &mdash; your notes as a map of [[wiki-links]]; drag, zoom and pan it, click a bubble to open the note</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="graph"></span><div class="bg-txt"><b>Note graph</b> &mdash; your notes as a map of [[wiki-links]] and {{embeds}}; drag, zoom and pan it, click a bubble to open the note</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="link"></span><div class="bg-txt"><b>Linked notes</b> &mdash; <b>[[Title]]</b> links to a note (type <kbd>[</kbd><kbd>[</kbd> for the picker), <b>{{Title}}</b> embeds it live in the preview, and the <b>Linked from</b> bar above the statusbar shows every note that points at the one you&rsquo;re reading</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Backup &#9662;</b> &mdash; JSON backup of everything, or export all notes as one Markdown file</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="upload"></span><div class="bg-txt"><b>Import &#9662;</b> &mdash; restore a backup or import .md files; you can also just drag &amp; drop files onto the app</div></div>
 
@@ -497,7 +504,15 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.14 <span class="pill">current</span></h4>
+            <h4>v1.15 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128209; <b>Note embeds</b> — type <code>{{Note title}}</code> on its own line and that note is rendered <b>live inside your preview</b>: a neat card with its title, an &ldquo;open&rdquo; shortcut, and the full rendered content. Great for pulling meeting notes into a project page, or a recipe into a meal plan. Type <code>{{</code> and the note picker pops up, just like <code>[[</code>. Nested embeds work (safely, a couple of levels deep), locked notes stay locked, and a missing title is one click from being created</li>
+              <li>&#128279; <b>Backlinks bar</b> — when other notes link to the note you&rsquo;re reading (via <code>[[links]]</code> or <code>{{embeds}}</code>), a &ldquo;Linked from&rdquo; bar appears above the status bar with a chip for every linking note — click one to jump there. Your notebook finally answers &ldquo;what points here?&rdquo;</li>
+              <li>&#128300; <b>The graph sees embeds too</b> — <code>{{embeds}}</code> now draw edges in the note graph, so all three ways of connecting notes ([[links]], {{embeds}}, tags) are first-class</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.14 &mdash; folders, simplified</h4>
             <ul>
               <li>&#128193; <b>Folders live in the sidebar, always</b> — no more switching to a separate Folders tab. Your folders sit right under the search &amp; sort rows with live counts, one click away. Collapse the section with the caret if you want the space back</li>
               <li>&#128070; <b>Drag &amp; drop filing</b> — grab any note card and drop it on a folder to file it. Drop it on <b>Unfiled notes</b> to pull it out of a folder, or on the <b>Trash</b> button to throw it away. The card highlights, the target glows — it&rsquo;s tactile and instant (mouse drag; on touch, use the card&rsquo;s &#8942; menu as before)</li>

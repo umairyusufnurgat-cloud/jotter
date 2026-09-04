@@ -4,7 +4,8 @@
    headings, bold, italic, strike, inline code, fenced code,
    blockquotes, nested ordered/unordered lists, task lists
    (interactive via data-task line numbers), tables, links,
-   images, autolinks, horizontal rules, backslash escapes.
+   images, autolinks, horizontal rules, backslash escapes,
+   [[wiki links]] and {{note embeds}} (resolved by the app).
    All content is HTML-escaped; URLs are scheme-sanitised.
    ============================================================ */
 (function (global) {
@@ -140,6 +141,14 @@
 
       /* horizontal rule */
       if (/^(-{3,}|\*{3,}|_{3,})$/.test(t)) { out.push('<hr>'); i++; continue; }
+
+      /* note embed  {{Note Title}} on its own line (content filled in by the app) */
+      var em = t.match(/^\{\{([^{}\n]+?)\}\}$/);
+      if (em) {
+        out.push('<div class="md-embed" data-embed="' + escapeHtml(em[1].trim()) + '"></div>');
+        i++;
+        continue;
+      }
 
       /* heading */
       var h = t.match(/^(#{1,6})\s+(.*)$/);
