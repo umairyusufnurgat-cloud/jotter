@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.16.2 — privacy policy + data deletion 🧾
+- **Privacy policy page** at `/privacy.html` — describes exactly what the cloud account does and doesn't touch (Google-verification-ready), linked from Settings
+- **Delete backup from Drive** button in Settings → Cloud account — a real data-deletion path (confirms, deletes the encrypted file, signs the device out; local notes untouched)
+- Service-worker cache bumped to v21 (pre-caches the privacy page)
+
 ## v1.16.1 — cloud accounts activated 🚀
 - The Google OAuth client ID is configured — **Settings → Cloud account → Sign in with Google** is now live on the site
 - Service-worker cache bumped so every returning visitor gets the activated build (with an announcement toast)

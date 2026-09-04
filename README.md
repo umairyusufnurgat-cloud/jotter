@@ -91,7 +91,25 @@ in *their own* Google Drive. There is no Jotter server — you only register the
    `var DRIVE_CLIENT_ID = '…apps.googleusercontent.com';`
 6. Commit — visitors now see **Settings → Cloud account → Sign in with Google**.
 
-Until you set a client ID, the feature stays completely hidden. Until the consent screen is
+Until you set a client ID, the feature stays completely hidden.
+
+### Going public — letting strangers sign in
+
+Google gates public OAuth apps in three stages:
+
+1. **Testing** (where a new project starts) — only up to 100 explicitly added test users can sign in,
+   and their tokens expire every 7 days. Fine for yourself; not for others.
+2. **Published, unverified** — press **Publish app** (Google Auth Platform → Audience). Anyone in the
+   world can then sign in after clicking through an "unverified app" warning — **but** Google caps an
+   unverified app at **100 new users for life**; after that, sign-in is blocked until you verify.
+3. **Verified** — unlimited users, no warning, free, ~10 business days. You'll need:
+   - the **privacy policy** — already shipped at [`/privacy.html`](privacy.html); paste that URL into the
+     consent screen's links (Application homepage: the site URL, Privacy policy: the privacy URL)
+   - **domain verification** — Search Console → add the site as a *URL prefix* → download the
+     verification HTML file and commit it to this repo → Verify
+   - a **scope justification** — "drive.appdata stores the user's own notebook, encrypted client-side,
+     in the user's own Drive app folder; no other Drive data is accessed"
+   - a **short demo video** of the sign-in → passphrase → sync flow Until the consent screen is
 published (verified), Google shows an "unverified app" note to test users — that's normal for
 personal projects, and you can click through it.
 

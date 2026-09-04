@@ -2350,6 +2350,7 @@
   var driveSyncing = false;
   var driveSec = $('#driveSec'), driveStatus = $('#driveStatus'), driveSigninBtn = $('#driveSigninBtn'),
       driveSyncBtn = $('#driveSyncBtn'), driveUnlockBtn = $('#driveUnlockBtn'), driveSignoutBtn = $('#driveSignoutBtn'),
+      driveDeleteBtn = $('#driveDeleteBtn'),
       driveAutoWrap = $('#driveAutoWrap'), driveAutoChk = $('#driveAutoChk');
   var scheduleDriveAutoSync = debounce(function () {
     if (drive.connected && drive.auto && driveSess.key && !driveSyncing) driveSync(true);
@@ -2534,6 +2535,35 @@
     });
   });
 
+  driveDeleteBtn.addEventListener('click', function () {
+    openConfirm('Delete cloud backup?', 'This permanently deletes the encrypted backup file from your Google Drive and signs this device out. Your notes on this device are not touched.', 'Delete backup', function () {
+      var done = function () {
+        try {
+          if (window.google && window.google.accounts && window.google.accounts.oauth2 && driveSess.token) {
+            window.google.accounts.oauth2.revoke(driveSess.token, function () {});
+          }
+        } catch (e) {}
+        drive = { connected: false, email: '', fileId: '', salt: '', auto: true, lastSync: 0 };
+        driveSess = { token: '', exp: 0, key: null };
+        saveDriveCfg();
+        renderDriveStatus();
+        toast('Cloud backup deleted from your Google Drive');
+      };
+      driveToken(false).then(function () {
+        var id = drive.fileId;
+        var p = id ? Promise.resolve(id) : driveFindFile();
+        return p.then(function (fid) {
+          if (!fid) { done(); return null; }
+          return driveApi('/drive/v3/files/' + fid, { method: 'DELETE' }).then(function (r) {
+            if (!r.ok) throw new Error('Drive ' + r.status);
+            return fid;
+          });
+        });
+      }).then(function (ok) { if (ok !== null) done(); })
+        .catch(function (err) { toast('\u26A0\uFE0F Could not delete the backup \u2014 ' + err.message); });
+    });
+  });
+
   function renderDriveStatus(msg) {
     if (!DRIVE_CLIENT_ID) { driveSec.hidden = true; return; }
     driveSec.hidden = false;
@@ -2541,6 +2571,7 @@
     driveUnlockBtn.hidden = !(drive.connected && !driveSess.key);
     driveSyncBtn.hidden = !(drive.connected && driveSess.key);
     driveSignoutBtn.hidden = !drive.connected;
+    driveDeleteBtn.hidden = !drive.connected;
     driveAutoWrap.hidden = !(drive.connected && driveSess.key);
     driveAutoChk.checked = !!drive.auto;
     if (msg) { driveStatus.textContent = msg; return; }
@@ -2621,7 +2652,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.16.1 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.16.2 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);

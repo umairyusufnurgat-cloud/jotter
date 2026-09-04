@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy — Jotter</title>
+<meta name="description" content="Jotter privacy policy: a zero-server notes app. Your notes stay in your browser and, if you enable the cloud account, encrypted in your own Google Drive." />
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 48px 20px 80px;
+    font: 15.5px/1.75 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #f4f2ec; color: #26292f;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0d0e12; color: #d8d9dd; }
+    a { color: #a99bff; }
+    .card { background: #16181d; border-color: #2a2d34; }
+    h2 { border-color: #2a2d34; }
+  }
+  main { max-width: 720px; margin: 0 auto; }
+  .brand { font-weight: 800; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: #6558d3; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 8px 0 4px; }
+  .updated { color: #6f7480; font-size: 13px; margin-bottom: 28px; }
+  h2 { font-size: 17px; margin: 34px 0 10px; padding-bottom: 8px; border-bottom: 1px solid #dedacf; }
+  p, li { color: inherit; }
+  a { color: #5448c0; }
+  code { background: rgba(101,88,211,.12); border-radius: 5px; padding: 1px 6px; font-size: 13.5px; }
+  .card {
+    background: #fbfaf7; border: 1px solid #dedacf; border-radius: 12px;
+    padding: 16px 20px; margin: 18px 0;
+  }
+  .card b { display: block; margin-bottom: 4px; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .back { display: inline-block; margin-top: 36px; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">Jotter</div>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: 4 September 2026 &middot; applies to the Jotter web app at this address</div>
+
+  <p><b>The short version:</b> Jotter has no servers, no accounts database, no analytics and no trackers.
+  Your notes live in <em>your</em> browser. If you switch on the optional cloud account, an
+  <b>end-to-end-encrypted</b> copy of your notebook is stored in <b>your own Google Drive</b> — we can never
+  read it, and neither can anyone operating this website.</p>
+
+  <h2>1. Who processes what</h2>
+  <ul>
+    <li><b>This website (a static page)</b> — serves the app files. It collects nothing: no analytics, no cookies, no tracking pixels, no logs of yours.</li>
+    <li><b>Your browser (local storage)</b> — all notes, folders, tags and settings are saved in your browser's localStorage on your device. They never leave it unless you explicitly use a sync or export feature.</li>
+    <li><b>Google (only if you enable the cloud account)</b> — described below.</li>
+    <li><b>GitHub (only if you enable GitHub sync)</b> — notes sync to a secret gist in your own GitHub account, using a token you provide. Jotter's authors have no access to it.</li>
+  </ul>
+
+  <h2>2. The cloud account and Google user data</h2>
+  <p>The optional cloud account uses Google Sign-In and requests exactly one Google scope:
+  <code>https://www.googleapis.com/auth/drive.appdata</code> — access to a <b>hidden application folder
+  inside your own Google Drive</b>, which only Jotter can see.</p>
+  <ul>
+    <li><b>What is stored:</b> a single file containing your notebook, encrypted in your browser before upload with AES-256-GCM. The key is derived from a passphrase that <b>never leaves your browser</b> and is never uploaded, logged, or transmitted anywhere.</li>
+    <li><b>What Google stores:</b> unreadable ciphertext. Your passphrase and decryption key are mathematically impossible for anyone else to obtain — there is no reset or recovery, by design.</li>
+    <li><b>What we can see:</b> nothing. This app has no backend. No one operating this website can read, decrypt, or recover your notes.</li>
+    <li><b>Access tokens:</b> sign-in produces a short-lived access token held in memory only (never written to disk), limited to the app-folder scope. Signing out revokes it immediately.</li>
+    <li><b>Your email address</b> is shown on the settings screen purely so you can see which account you signed in with. It is not stored anywhere except your own browser.</li>
+    <li><b>Other Drive files:</b> the app-folder scope grants no access to any other file in your Drive — it cannot read, modify, or see the rest of your Drive.</li>
+  </ul>
+
+  <h2>3. Deleting your data</h2>
+  <ul>
+    <li><b>Local notes:</b> use Settings &rarr; Backup &rarr; export first if you want a copy, then trash your notes and empty the trash; browser data is cleared with your browser's site-data controls.</li>
+    <li><b>Cloud backup:</b> Settings &rarr; Cloud account &rarr; <b>Delete backup from Drive</b> permanently deletes the encrypted file from your Google Drive. Signing out separately removes the app's access to your Drive.</li>
+    <li><b>Remove Drive access entirely:</b> Google account &rarr; Security &rarr; "Third-party apps with account access" &rarr; Jotter &rarr; Remove access.</li>
+  </ul>
+
+  <h2>4. Locked notes</h2>
+  <p>Notes you lock with a PIN are encrypted in your browser with AES-256-GCM before being saved anywhere —
+  locally, in exports, in GitHub sync, or in the Drive cloud backup. The PIN is never stored or sent anywhere.
+
+  <h2>5. What we don't do</h2>
+  <ul>
+    <li>No analytics or telemetry of any kind</li>
+    <li>No advertising, no data sale, no data sharing with third parties</li>
+    <li>No account database — there is nothing to breach</li>
+    <li>No cookies (beyond your browser's own site data for the app itself)</li>
+  </ul>
+
+  <h2>6. Open source</h2>
+  <p>Jotter is open source — you can read every line that runs in your browser, including exactly how
+  encryption and sync work, in the <a href="https://github.com/umairyusufnurgat-cloud/jotter">GitHub repository</a>.</p>
+
+  <h2>7. Contact</h2>
+  <p>Questions about this policy or the app: open an issue on the
+  <a href="https://github.com/umairyusufnurgat-cloud/jotter/issues">GitHub issue tracker</a>.</p>
+
+  <div class="card">
+    <b>Summary for reviewers</b>
+    The app requests the <code>drive.appdata</code> scope solely to store one encrypted file (the user's own
+    notebook, encrypted client-side with a user-chosen passphrase) in the user's own Drive application data
+    folder. No other Drive data is read or written. No data is transmitted to any server other than Google's
+    Drive API endpoint, and the stored content is end-to-end encrypted by the client before upload.
+  </div>
+
+  <a class="back" href="./">&larr; Back to Jotter</a>
+</main>
+</body>
+</html>
