@@ -35,6 +35,7 @@
 - 🕰 **Version history** — automatic snapshots while you edit; preview and restore any of the last 10 versions (More ▾)
 - 🔗 **Share a note as a link** — the whole note rides inside the URL; opening it on any device saves a copy — no account, no server
 - 🕸 **Note graph** — see your notes as an interactive map of wiki-links: drag, zoom, pan, click a bubble to open the note
+- 🛡️ **Cloud account** — sign in with Google and your whole notebook syncs **end-to-end encrypted** to a hidden folder in *your own* Google Drive: no Jotter server, Google only ever stores ciphertext
 - 🔒 **PIN-locked notes** — encrypt any note's text with a PIN (AES-256-GCM via your browser's built-in crypto); it stays encrypted in storage, backups and sync, unlocking only per tab when you enter the PIN (More ▾ → Lock note)
 - 🔍 **Find in note** — `Ctrl`/`⌘`+`F` highlights every match in the preview and jumps between them
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
@@ -73,6 +74,26 @@ doesn't exist yet — clicking it creates the note on the spot.
 Type `{{` and pick a note to **embed** it: the note's content renders live inside your preview as a neat
 card (open it with one click). When other notes link to the one you're reading, a **Linked from** bar
 appears above the status bar — click any chip to jump there. Embeds also draw edges in the note graph.
+
+## 🛡️ Cloud accounts (owner setup, one time)
+
+Jotter can offer each visitor a personal **cloud account**: their notes, end-to-end encrypted
+(PBKDF2 → AES-256-GCM, passphrase never leaves the browser), stored in a hidden app folder
+in *their own* Google Drive. There is no Jotter server — you only register the app with Google once:
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → create a project (any name).
+2. **APIs & Services → Library** → enable the **Google Drive API**.
+3. **APIs & Services → OAuth consent screen** → External → fill in an app name and your email.
+   Add yourself (and anyone else who should use it) as a **test user** — or publish the app later.
+4. **Credentials → Create credentials → OAuth client ID** → type **Web application** →
+   under **Authorized JavaScript origins** add your site's origin, e.g. `https://umairyusufnurgat-cloud.github.io`.
+5. Copy the client ID and set it at the top of the drive section in `app.js`:
+   `var DRIVE_CLIENT_ID = '…apps.googleusercontent.com';`
+6. Commit — visitors now see **Settings → Cloud account → Sign in with Google**.
+
+Until you set a client ID, the feature stays completely hidden. Until the consent screen is
+published (verified), Google shows an "unverified app" note to test users — that's normal for
+personal projects, and you can click through it.
 
 ## 🚀 Launch it
 

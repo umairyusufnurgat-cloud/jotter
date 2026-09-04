@@ -1,6 +1,9 @@
 # Jotter Accounts — Design Considerations
 
-**Status: thinking out loud (v1.10). Nothing here is built, shipped, or promised.**
+**Status: v1.16 SHIPPED a first real account — "Cloud account": sign in with Google,
+whole-notebook end-to-end encryption (PBKDF2 → AES-256-GCM), stored in the user's own
+Google Drive app folder. No Jotter server; Google holds only ciphertext. Setup: README →
+"Cloud accounts (owner setup)". The analysis below is kept for history and future options.**
 Jotter today is a zero-dependency, static PWA: HTML + CSS + vanilla JS on GitHub Pages,
 data in `localStorage`, optional private sync via a GitHub gist. There is no server of ours
 in the loop — and that is a feature worth protecting.

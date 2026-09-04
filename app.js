@@ -259,6 +259,7 @@
       toast('\u26A0\uFE0F Browser storage is full \u2014 the latest change could not be saved. Remove a large image or some notes, and consider taking a Backup.', { timeout: 6500 });
     }
     if (!syncing) scheduleAutoSync();
+    if (!driveSyncing) scheduleDriveAutoSync();
   }
   function persistSettings() { store.set(SETTINGS_KEY, JSON.stringify(settings)); }
   function persistPurged() { store.set(PURGED_KEY, JSON.stringify(purged)); }
@@ -2336,15 +2337,287 @@
     }
   }
 
+  /* ---------- cloud account: end-to-end-encrypted sync to the user's own Google Drive ---------- */
+  var DRIVE_CLIENT_ID = window.JOTTER_DRIVE_CLIENT_ID || ''; // instance owner sets this — see README "Cloud accounts"
+  var DRIVE_CFG_KEY = 'jotter.drive.v1';
+  var DRIVE_FILE = 'jotter-notes-e2e.json';
+  var drive = { connected: false, email: '', fileId: '', salt: '', auto: true, lastSync: 0 };
+  var driveSess = { token: '', exp: 0, key: null }; // access token + derived key: memory only, never persisted
+  var driveSyncing = false;
+  var driveSec = $('#driveSec'), driveStatus = $('#driveStatus'), driveSigninBtn = $('#driveSigninBtn'),
+      driveSyncBtn = $('#driveSyncBtn'), driveUnlockBtn = $('#driveUnlockBtn'), driveSignoutBtn = $('#driveSignoutBtn'),
+      driveAutoWrap = $('#driveAutoWrap'), driveAutoChk = $('#driveAutoChk');
+  var scheduleDriveAutoSync = debounce(function () {
+    if (drive.connected && drive.auto && driveSess.key && !driveSyncing) driveSync(true);
+  }, 5000);
+
+  function loadDriveCfg() {
+    var raw = store.get(DRIVE_CFG_KEY);
+    if (!raw) return;
+    try {
+      var c = JSON.parse(raw);
+      drive.connected = !!c.connected;
+      drive.email = c.email || '';
+      drive.fileId = c.fileId || '';
+      drive.salt = c.salt || '';
+      drive.auto = c.auto !== false;
+      drive.lastSync = +c.lastSync || 0;
+    } catch (e) { /* ignore */ }
+  }
+  function saveDriveCfg() { store.set(DRIVE_CFG_KEY, JSON.stringify(drive)); }
+
+  function loadGis() {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
+    if (!loadGis.p) {
+      loadGis.p = new Promise(function (res, rej) {
+        var s = document.createElement('script');
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.onload = res;
+        s.onerror = function () { loadGis.p = null; rej(new Error('could not load Google sign-in')); };
+        document.head.appendChild(s);
+      });
+    }
+    return loadGis.p;
+  }
+
+  function driveToken(interactive) {
+    if (driveSess.token && Date.now() < driveSess.exp - 60000) return Promise.resolve(driveSess.token);
+    return loadGis().then(function () {
+      return new Promise(function (res, rej) {
+        try {
+          var tc = window.google.accounts.oauth2.initTokenClient({
+            client_id: DRIVE_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/drive.appdata',
+            callback: function (t) {
+              if (!t || t.error || !t.access_token) { rej(new Error((t && t.error) || 'Google sign-in cancelled')); return; }
+              driveSess.token = t.access_token;
+              driveSess.exp = Date.now() + (t.expires_in || 3600) * 1000;
+              res(t.access_token);
+            }
+          });
+          tc.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+        } catch (e) { rej(e); }
+      });
+    });
+  }
+
+  function driveApi(path, opts) {
+    return driveToken(false).then(function (tok) {
+      opts = opts || {};
+      opts.headers = Object.assign({ Authorization: 'Bearer ' + tok }, opts.headers || {});
+      return fetch('https://www.googleapis.com' + path, opts);
+    });
+  }
+  function driveFindFile() {
+    var q = encodeURIComponent("name = '" + DRIVE_FILE + "'");
+    return driveApi('/drive/v3/files?spaces=appDataFolder&q=' + q + '&fields=files(id)&pageSize=5')
+      .then(function (r) { if (!r.ok) throw new Error('Drive ' + r.status); return r.json(); })
+      .then(function (j) { return (j.files && j.files[0] && j.files[0].id) || null; });
+  }
+  function driveDownload(id) {
+    return driveApi('/drive/v3/files/' + id + '?alt=media')
+      .then(function (r) { if (!r.ok) throw new Error('Drive ' + r.status); return r.text(); });
+  }
+  function driveCreateFile() {
+    return driveApi('/drive/v3/files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: DRIVE_FILE, parents: ['appDataFolder'] })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('Drive ' + r.status);
+      return r.json();
+    }).then(function (j) {
+      if (!j.id) throw new Error('Drive create failed');
+      return j.id;
+    });
+  }
+  function driveUpload(id, text) {
+    return driveApi('/upload/drive/v3/files/' + id + '?uploadType=media', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: text
+    }).then(function (r) { if (!r.ok) throw new Error('Drive ' + r.status); return true; });
+  }
+  function driveWhoAmI() {
+    return driveApi('/drive/v3/about?fields=user')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { return (j && j.user && j.user.emailAddress) || 'Google account'; })
+      .catch(function () { return 'Google account'; });
+  }
+
+  function driveDecryptPayload(env) {
+    if (!env || env.v !== 1 || !env.iv || !env.ct || !env.salt) throw new Error('backup not readable');
+    if (env.salt !== drive.salt) throw new Error('this backup was written with a different passphrase');
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToU8(env.iv) }, driveSess.key, b64ToU8(env.ct))
+      .then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); },
+        function () { driveSess.key = null; throw new Error('wrong passphrase'); });
+  }
+
+  /* passphrase flows (prompt modal, password-masked) */
+  function driveAskUnlock(cb) {
+    openPromptModal('Cloud account passphrase', '', 'Unlock', function (pass) {
+      if (!pass) { toast('Passphrase required to sync'); return; }
+      deriveKey(pass, b64ToU8(drive.salt)).then(function (key) {
+        driveSess.key = key;
+        renderDriveStatus();
+        if (cb) cb();
+        else driveSync(false);
+      });
+    }, { type: 'password', max: 200 });
+  }
+  function driveAskChoose() {
+    openPromptModal('Choose an encryption passphrase', '', 'Continue', function (pass) {
+      if (!pass || pass.length < 6) { toast('Use at least 6 characters'); driveAskChoose(); return; }
+      openPromptModal('Confirm the passphrase', '', 'Enable cloud account', function (pass2) {
+        if (pass2 !== pass) { toast('Passphrases didn\u2019t match — try again'); driveAskChoose(); return; }
+        drive.salt = u8ToB64(crypto.getRandomValues(new Uint8Array(16)));
+        deriveKey(pass, b64ToU8(drive.salt)).then(function (key) {
+          driveSess.key = key;
+          drive.connected = true;
+          saveDriveCfg();
+          renderDriveStatus();
+          driveSync(false);
+        });
+      }, { type: 'password', max: 200 });
+    }, { type: 'password', max: 200 });
+  }
+
+  driveSigninBtn.addEventListener('click', function () {
+    driveToken(true).then(function () {
+      return driveWhoAmI().then(function (email) {
+        drive.email = email;
+        return driveFindFile();
+      }).then(function (id) {
+        if (id) {
+          drive.fileId = id;
+          return driveDownload(id).then(function (txt) {
+            try { drive.salt = (JSON.parse(txt) || {}).salt || ''; } catch (e) { drive.salt = ''; }
+            saveDriveCfg();
+            drive.connected = true;
+            renderDriveStatus();
+            driveAskUnlock();
+          });
+        }
+        driveAskChoose();
+      });
+    }).catch(function (err) {
+      toast('\u26A0\uFE0F ' + err.message);
+    });
+  });
+
+  driveUnlockBtn.addEventListener('click', function () { driveAskUnlock(); });
+  driveSyncBtn.addEventListener('click', function () {
+    if (!driveSess.key) { driveAskUnlock(); return; }
+    driveSync(false);
+  });
+  driveAutoChk.addEventListener('change', function () {
+    drive.auto = driveAutoChk.checked;
+    saveDriveCfg();
+    toast(drive.auto ? 'Drive auto-sync on' : 'Drive auto-sync off');
+  });
+  driveSignoutBtn.addEventListener('click', function () {
+    openConfirm('Sign out of cloud account?', 'This stops Drive syncing on this device. Your notes stay here, and the encrypted backup stays in your Drive until you delete it.', 'Sign out', function () {
+      try {
+        if (window.google && window.google.accounts && window.google.accounts.oauth2 && driveSess.token) {
+          window.google.accounts.oauth2.revoke(driveSess.token, function () {});
+        }
+      } catch (e) {}
+      drive = { connected: false, email: '', fileId: '', salt: '', auto: true, lastSync: 0 };
+      driveSess = { token: '', exp: 0, key: null };
+      saveDriveCfg();
+      renderDriveStatus();
+      toast('Signed out of the cloud account');
+    });
+  });
+
+  function renderDriveStatus(msg) {
+    if (!DRIVE_CLIENT_ID) { driveSec.hidden = true; return; }
+    driveSec.hidden = false;
+    driveSigninBtn.hidden = drive.connected;
+    driveUnlockBtn.hidden = !(drive.connected && !driveSess.key);
+    driveSyncBtn.hidden = !(drive.connected && driveSess.key);
+    driveSignoutBtn.hidden = !drive.connected;
+    driveAutoWrap.hidden = !(drive.connected && driveSess.key);
+    driveAutoChk.checked = !!drive.auto;
+    if (msg) { driveStatus.textContent = msg; return; }
+    if (!drive.connected) { driveStatus.textContent = 'Not connected.'; return; }
+    var last = drive.lastSync ? new Date(drive.lastSync).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'never';
+    if (!driveSess.key) {
+      driveStatus.textContent = 'Signed in as ' + drive.email + ' \u00B7 locked \u2014 enter your passphrase to sync (last sync: ' + last + ').';
+      return;
+    }
+    driveStatus.textContent = drive.email + ' \u00B7 end-to-end encrypted \u00B7 last sync: ' + last;
+  }
+  var updateDriveStatus = renderDriveStatus;
+
+  async function driveSync(silent) {
+    if (driveSyncing || !drive.connected) return;
+    if (!driveSess.key) { if (!silent) driveAskUnlock(); return; }
+    driveSyncing = true;
+    renderDriveStatus('Syncing\u2026');
+    try {
+      if (dirty) saveActive(); // let unsaved edits participate in the merge
+      var id = drive.fileId || await driveFindFile();
+      var remote = null;
+      if (id) {
+        var txt = await driveDownload(id);
+        if (txt && txt.trim()) {
+          var env = JSON.parse(txt);
+          remote = await driveDecryptPayload(env);
+          drive.fileId = id;
+        }
+      }
+      var changed = false;
+      if (remote && Array.isArray(remote.notes)) changed = mergeNotes(remote.notes).changed;
+      if (remote && Array.isArray(remote.purged)) changed = applyPurged(remote.purged) || changed;
+      if (remote && Array.isArray(remote.folders)) changed = mergeFolders(remote.folders) || changed;
+      if (remote && Array.isArray(remote.folderTombs)) changed = applyFolderTombs(remote.folderTombs) || changed;
+
+      var activeNote = getNote(ui.activeId);
+      var activeStamp = activeNote ? activeNote.updatedAt : 0;
+      if (changed) { persist(); persistPurged(); }
+
+      var env2 = await encryptWithKey(driveSess.key, syncPayload(), drive.salt);
+      if (!drive.fileId) drive.fileId = await driveCreateFile();
+      await driveUpload(drive.fileId, JSON.stringify(env2));
+      drive.lastSync = Date.now();
+      saveDriveCfg();
+      renderDriveStatus();
+
+      var an = getNote(ui.activeId);
+      if (!an || an.updatedAt !== activeStamp) renderAll();
+      else { renderSidebar(); updateStorageNote(); }
+      if (!silent) toast('\u2601\uFE0F Synced with your Google Drive');
+    } catch (err) {
+      renderDriveStatus('\u26A0\uFE0F ' + err.message);
+      if (!silent) toast('\u26A0\uFE0F Drive sync failed \u2014 ' + err.message);
+    } finally {
+      driveSyncing = false;
+    }
+  }
+
+  function driveWake() {
+    if (!DRIVE_CLIENT_ID || !drive.connected) return;
+    driveToken(false).then(function () {
+      if (driveSess.key) { driveSync(true); return; }
+      renderDriveStatus();
+      driveAskUnlock(function () { driveSync(true); });
+    }).catch(function () {
+      renderDriveStatus('Signed out of Google \u2014 open Settings to sign in again.');
+    });
+  }
+  loadDriveCfg();
+
   /* ---------- settings modal ---------- */
   function openSettings() {
     syncTokenInput.value = sync.token || '';
     syncAutoChk.checked = !!sync.auto;
     updateSyncStatus();
+    renderDriveStatus();
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.15 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.16 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2408,9 +2681,12 @@
 
   /* ---------- prompt modal (generic input dialog) ---------- */
   var promptCb = null;
-  function openPromptModal(title, value, okLabel, cb) {
+  function openPromptModal(title, value, okLabel, cb, opts) {
+    opts = opts || {};
     promptTitle.textContent = title;
     promptInput.value = value || '';
+    promptInput.type = opts.type || 'text';
+    if (opts.max != null) promptInput.maxLength = opts.max;
     promptOkBtn.textContent = okLabel || 'OK';
     promptCb = cb;
     promptOverlay.hidden = false;
@@ -3897,12 +4173,13 @@
     }
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
+    if (DRIVE_CLIENT_ID && drive.connected) setTimeout(driveWake, 3000);
     var ver = store.get(VER_KEY);
-    if (ver !== '18') {
-      store.set(VER_KEY, '18');
+    if (ver !== '19') {
+      store.set(VER_KEY, '19');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.15 \u2014 note embeds ({{Title}}) render other notes inline, and a backlinks bar shows who links to the note you\u2019re reading', { timeout: 8000 });
+          toast('\u2728 Jotter updated to v1.16 \u2014 cloud accounts: sign in with Google and your notes sync, end-to-end encrypted, to your own Google Drive', { timeout: 8000 });
         }, 700);
       }
     }

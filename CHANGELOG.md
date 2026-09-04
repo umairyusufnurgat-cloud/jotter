@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.16 — cloud accounts: E2E-encrypted sync to your own Google Drive 🛡️
+- **Cloud account (beta)** — Settings → "Sign in with Google": Jotter stores your whole notebook, end-to-end encrypted, in a hidden app folder in **your own Google Drive**. No Jotter server exists; Google only ever sees ciphertext
+- **Zero-knowledge by design** — a passphrase you choose derives the key (PBKDF2, 150k iterations → AES-256-GCM, the same crypto as PIN-locked notes); it is never stored, sent, or recoverable — don't lose it
+- **Any device** — sign in with the same Google account + passphrase and your notes merge back (same newest-wins merge as GitHub sync, including trash and folders)
+- Auto-sync while you write (5s debounce), manual "Sync now", and a clear sign-out (revokes the Google token; the encrypted backup stays in your Drive)
+- The feature is completely hidden until the instance owner sets a Google OAuth client ID (README has the 6-step guide)
+- Prompt dialogs now support password masking (used for the passphrase)
+
 ## v1.15 — linked notes: embeds & backlinks 📎
 - **Note embeds** — `{{Note title}}` on its own line renders that note live inside the preview as a card (title + open button + full content); type `{{` for the same autocomplete as `[[`; nested embeds expand a couple of levels deep; self-embeds are detected and skipped; missing titles are one click from creation; locked notes show a locked placeholder, never their text
 - **Backlinks bar** — "Linked from" chips above the statusbar list every note that links/embeds the current note; click to jump

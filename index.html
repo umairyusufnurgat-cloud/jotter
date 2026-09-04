@@ -302,6 +302,26 @@
         <button class="icon-btn" id="settingsCloseBtn" data-icon="x" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <section class="set-sec" id="driveSec" hidden>
+          <h3>🛡️ Cloud account — your notes in your own Google Drive, end-to-end encrypted</h3>
+          <p class="set-desc">
+            Sign in with Google and Jotter keeps a copy of your notebook <strong>encrypted inside your own
+            Google Drive</strong> (a hidden app folder only Jotter can see). Your passphrase scrambles everything
+            <em>before it leaves this browser</em> — Google only ever stores unreadable ciphertext, and there is
+            no Jotter server. Open Jotter anywhere, sign in with the same Google account, enter your passphrase,
+            and your notes are back.
+            <b>Don&rsquo;t lose the passphrase</b> — by design it cannot be reset or recovered by anyone.
+          </p>
+          <div class="sync-status" id="driveStatus">Not connected.</div>
+          <div class="set-actions">
+            <button class="btn small primary" id="driveSigninBtn"><span>Sign in with Google</span></button>
+            <button class="btn small ghost" id="driveSyncBtn" data-icon="cloud" hidden><span>Sync now</span></button>
+            <button class="btn small ghost" id="driveUnlockBtn" data-icon="lock" hidden><span>Enter passphrase</span></button>
+            <label class="switch" id="driveAutoWrap" hidden><input type="checkbox" id="driveAutoChk" checked /><span>Auto-sync</span></label>
+            <span class="spacer"></span>
+            <button class="link-btn danger" id="driveSignoutBtn" hidden><span>Sign out</span></button>
+          </div>
+        </section>
         <section class="set-sec">
           <h3>☁️ Sync — free private cloud via your GitHub</h3>
           <p class="set-desc">
@@ -325,7 +345,7 @@
         <section class="set-sec">
           <h3>ℹ️ About</h3>
           <p class="set-desc" id="aboutInfo"></p>
-          <p class="set-desc">&#128273; <b>User accounts are on the roadmap</b> &mdash; the design and options are written up in <a href="https://github.com/umairyusufnurgat-cloud/jotter/blob/main/ACCOUNTS.md" target="_blank" rel="noopener noreferrer">ACCOUNTS.md</a> in the repo. Today, GitHub sync (above) already gives you a private, account-less cloud.</p>
+          <p class="set-desc">&#128273; <b>Cloud accounts are here (beta)</b> &mdash; sign in with Google above and your notes live encrypted in your own Drive. The full design write-up lives in <a href="https://github.com/umairyusufnurgat-cloud/jotter/blob/main/ACCOUNTS.md" target="_blank" rel="noopener noreferrer">ACCOUNTS.md</a> in the repo.</p>
         </section>
       </div>
     </div>
@@ -463,7 +483,7 @@
           <div class="bg-row"><span class="bg-ico" data-icon="droplet"></span><div class="bg-txt"><b>Accent colour</b> &mdash; pick from six accent colours</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="sun"></span><div class="bg-txt"><b>Theme</b> &mdash; switch between light and dark</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="chart"></span><div class="bg-txt"><b>Insights</b> &mdash; your notebook in numbers: words, streaks, activity charts, top tags and storage</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="sliders"></span><div class="bg-txt"><b>Settings &amp; sync</b> &mdash; GitHub sync setup and storage info</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="sliders"></span><div class="bg-txt"><b>Settings &amp; sync</b> &mdash; the <b>Cloud account</b> (your notes, end-to-end encrypted in your own Google Drive), GitHub sync, and storage info</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="help"></span><div class="bg-txt"><b>Help &amp; guide</b> &mdash; the guide you are reading (<kbd>?</kbd>)</div></div>
 
           <h4>Sidebar</h4>
@@ -504,7 +524,15 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.15 <span class="pill">current</span></h4>
+            <h4>v1.16 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128737;&#65039; <b>Cloud accounts (beta)</b> — sign in with Google and Jotter keeps a copy of your notebook <b>end-to-end encrypted inside your own Google Drive</b>, in a hidden app folder only Jotter can see. Your passphrase scrambles everything <em>before it leaves your browser</em> — Google stores only unreadable ciphertext, and there is no Jotter server. Sign in from any device with the same Google account, enter your passphrase, and your notes are back</li>
+              <li>&#128273; The passphrase cannot be reset or recovered by anyone, <b>by design</b> — the same zero-knowledge crypto as PIN-locked notes (PBKDF2 &rarr; AES-256-GCM), now wrapping your whole notebook</li>
+              <li>&#9889; Auto-sync keeps Drive current while you write; Settings &rarr; Cloud account for sign-in, Sync now, and sign-out</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.15 &mdash; linked notes</h4>
             <ul>
               <li>&#128209; <b>Note embeds</b> — type <code>{{Note title}}</code> on its own line and that note is rendered <b>live inside your preview</b>: a neat card with its title, an &ldquo;open&rdquo; shortcut, and the full rendered content. Great for pulling meeting notes into a project page, or a recipe into a meal plan. Type <code>{{</code> and the note picker pops up, just like <code>[[</code>. Nested embeds work (safely, a couple of levels deep), locked notes stay locked, and a missing title is one click from being created</li>
               <li>&#128279; <b>Backlinks bar</b> — when other notes link to the note you&rsquo;re reading (via <code>[[links]]</code> or <code>{{embeds}}</code>), a &ldquo;Linked from&rdquo; bar appears above the status bar with a chip for every linking note — click one to jump there. Your notebook finally answers &ldquo;what points here?&rdquo;</li>
