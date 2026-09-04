@@ -2338,7 +2338,11 @@
   }
 
   /* ---------- cloud account: end-to-end-encrypted sync to the user's own Google Drive ---------- */
-  var DRIVE_CLIENT_ID = window.JOTTER_DRIVE_CLIENT_ID || ''; // instance owner sets this — see README "Cloud accounts"
+  // Google OAuth client ID for the cloud account (README → "Cloud accounts").
+  // Not a secret — it's locked to authorized origins in Google's console.
+  var DRIVE_CLIENT_ID = window.JOTTER_DRIVE_CLIENT_ID !== undefined
+    ? String(window.JOTTER_DRIVE_CLIENT_ID) // tests (and forks) can override or blank it
+    : '992197425984-rvtg2obf3l5j7rhgvru4qsoaiangn5b6.apps.googleusercontent.com';
   var DRIVE_CFG_KEY = 'jotter.drive.v1';
   var DRIVE_FILE = 'jotter-notes-e2e.json';
   var drive = { connected: false, email: '', fileId: '', salt: '', auto: true, lastSync: 0 };
@@ -2617,7 +2621,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.16 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.16.1 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -4175,11 +4179,11 @@
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     if (DRIVE_CLIENT_ID && drive.connected) setTimeout(driveWake, 3000);
     var ver = store.get(VER_KEY);
-    if (ver !== '19') {
-      store.set(VER_KEY, '19');
+    if (ver !== '20') {
+      store.set(VER_KEY, '20');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.16 \u2014 cloud accounts: sign in with Google and your notes sync, end-to-end encrypted, to your own Google Drive', { timeout: 8000 });
+          toast('\u2601\uFE0F Cloud accounts are now active \u2014 Settings \u2192 Sign in with Google to sync your notes, end-to-end encrypted, to your own Google Drive', { timeout: 9000 });
         }, 700);
       }
     }

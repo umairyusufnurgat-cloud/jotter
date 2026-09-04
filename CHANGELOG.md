@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.16.1 — cloud accounts activated 🚀
+- The Google OAuth client ID is configured — **Settings → Cloud account → Sign in with Google** is now live on the site
+- Service-worker cache bumped so every returning visitor gets the activated build (with an announcement toast)
+
 ## v1.16 — cloud accounts: E2E-encrypted sync to your own Google Drive 🛡️
 - **Cloud account (beta)** — Settings → "Sign in with Google": Jotter stores your whole notebook, end-to-end encrypted, in a hidden app folder in **your own Google Drive**. No Jotter server exists; Google only ever sees ciphertext
 - **Zero-knowledge by design** — a passphrase you choose derives the key (PBKDF2, 150k iterations → AES-256-GCM, the same crypto as PIN-locked notes); it is never stored, sent, or recoverable — don't lose it

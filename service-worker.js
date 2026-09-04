@@ -4,7 +4,7 @@
    arrive immediately and the app still works offline.
    Bump CACHE version whenever you change app files.
    ============================================================ */
-const CACHE = 'jotter-v19';
+const CACHE = 'jotter-v20';
 const ASSETS = [
   './',
   './index.html',
