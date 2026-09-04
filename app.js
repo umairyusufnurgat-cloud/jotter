@@ -151,11 +151,10 @@
   /* ---------------- state ---------------- */
   var notes = [];
   var settings = { theme: null, sort: 'updated', view: 'split', lastId: null, accent: 'indigo', sideWidth: 302, sideCollapsed: false };
-  var ui = { activeId: null, search: '', tag: null, folder: null, all: false, fx: false, trash: false, cal: false, calMonth: new Date(), calDay: null };
+  var ui = { activeId: null, search: '', tag: null, folder: null, all: false, trash: false, cal: false, calMonth: new Date(), calDay: null };
   var dirty = false;
-  var purgeArm = { id: null, t: null };
-  var wikiPop = { open: false, items: [], sel: 0, startIdx: 0, caret: 0 };
   var purged = []; // tombstones for notes deleted forever (so sync doesn't resurrect them)
+  var wikiPop = { open: false, items: [], sel: 0, startIdx: 0, caret: 0 };
 
   /* ---------------- dom refs ---------------- */
   var sidebar = $('#sidebar'), overlay = $('#overlay'), toastEl = $('#toast');
@@ -188,7 +187,8 @@
   var setLockOverlay = $('#setLockOverlay'), setLockCloseBtn = $('#setLockCloseBtn'), setLockCancelBtn = $('#setLockCancelBtn');
   var setLockGoBtn = $('#setLockGoBtn'), setLockPin = $('#setLockPin'), setLockPin2 = $('#setLockPin2'), lockNoteBtn = $('#lockNoteBtn');
   var moveBtn = $('#moveBtn');
-  var foldersPanel = $('#foldersPanel'), foldersList = $('#foldersList'), foldersViewBtn = $('#foldersViewBtn'), newFolderBtn2 = $('#newFolderBtn');
+  var foldersSec = $('#foldersSec'), fsHead = $('#fsHead'), fsCaret = $('#fsCaret'), fsTotal = $('#fsTotal'),
+      fsNewBtn = $('#fsNewBtn'), fsBody = $('#fsBody'), fsRows = $('#fsRows');
   var folderOverlay = $('#folderOverlay'), folderCloseBtn = $('#folderCloseBtn'), folderPick = $('#folderPick');
   var newFolderInput = $('#newFolderInput'), newFolderBtn = $('#newFolderBtn'), folderNoteHint = $('#folderNoteHint'), sbFolder = $('#sbFolder');
   var locBar = $('#locBar'), locBackBtn = $('#locBackBtn'), locIco = $('#locIco'), locName = $('#locName'),
@@ -202,7 +202,8 @@
   var ctxMenu = $('#ctxMenu'), outlineBtn = $('#outlineBtn'), outlineMenu = $('#outlineMenu');
   var zenBtn = $('#zenBtn'), zenExitBtn = $('#zenExitBtn');
   var helpBtn = $('#helpBtn'), helpOverlay = $('#helpOverlay'), helpCloseBtn = $('#helpCloseBtn'), helpTabsEl = $('#helpTabs');
-  var storageNote = $('#storageNote'), emptyTrashBtn = $('#emptyTrashBtn');
+  var storageNote = $('#storageNote');
+  var trashBar = $('#trashBar'), trashCount2 = $('#trashCount2'), recoverAllBtn = $('#recoverAllBtn'), deleteAllBtn = $('#deleteAllBtn');
   var emptyState = $('#emptyState'), emptyTitle = $('#emptyTitle'), emptyText = $('#emptyText');
   var emptyNewBtn = $('#emptyNewBtn'), emptyDailyBtn = $('#emptyDailyBtn'), clearFiltersBtn = $('#clearFiltersBtn');
   var editor = $('#editor'), trashBanner = $('#trashBanner'), restoreBtn = $('#restoreBtn'), deleteForeverBtn = $('#deleteForeverBtn');
@@ -452,28 +453,29 @@
 
   function renderSidebar() {
     sortSelect.value = settings.sort;
-    notesViewBtn.classList.toggle('active', !ui.trash && !ui.cal && !ui.fx);
-    foldersViewBtn.classList.toggle('active', ui.fx && !ui.trash && !ui.cal);
+    notesViewBtn.classList.toggle('active', !ui.trash && !ui.cal);
     calViewBtn.classList.toggle('active', ui.cal && !ui.trash);
     trashViewBtn.classList.toggle('active', ui.trash);
     var trashed = notes.filter(function (n) { return n.deleted; }).length;
     trashCount.textContent = trashed > 0 ? String(trashed) : '';
     trashCount.hidden = trashed === 0;
-    emptyTrashBtn.hidden = !(ui.trash && trashed > 0);
+    trashBar.hidden = !ui.trash;
+    trashCount2.textContent = trashed > 0 ? trashed + ' note' + (trashed === 1 ? '' : 's') : 'is empty';
+    recoverAllBtn.disabled = trashed === 0;
+    deleteAllBtn.disabled = trashed === 0;
     var streak = journalStreak();
     streakBadge.hidden = streak < 2;
     if (streak >= 2) streakBadge.textContent = '\uD83D\uDD25 ' + streak;
     dailyBtn.title = streak >= 2 ? streak + '-day journaling streak' : 'Create today\u2019s journal entry';
     var calView = ui.cal && !ui.trash;
-    var fxView = ui.fx && !ui.trash && !ui.cal;
     calPanel.hidden = !calView;
-    foldersPanel.hidden = !fxView;
-    sideMeta.hidden = calView || fxView;
-    tagFilters.hidden = calView || fxView;
-    notesList.hidden = calView || fxView;
+    foldersSec.hidden = calView || ui.trash;
+    sideMeta.hidden = calView;
+    tagFilters.hidden = calView || ui.trash;
+    notesList.hidden = calView;
+    if (!calView && !ui.trash) renderFoldersSec();
     renderLocBar();
     if (calView) renderCalendar();
-    else if (fxView) renderFoldersView();
     else { renderTagFilters(); renderNotesList(); }
   }
 
@@ -520,14 +522,14 @@
     }).join('');
     var actions = '';
     if (ui.trash) {
-      var armed = purgeArm.id === n.id;
       actions = '<div class="nc-actions">' +
         '<button class="mini-btn" data-act="restore" data-id="' + n.id + '">' + ICONS.undoS + '<span>Restore</span></button>' +
-        '<button class="mini-btn danger' + (armed ? ' armed' : '') + '" data-act="purge" data-id="' + n.id + '">' +
-        ICONS.trashS + '<span>' + (armed ? 'Sure?' : 'Delete') + '</span></button>' +
+        '<button class="mini-btn danger" data-act="purge" data-id="' + n.id + '">' +
+        ICONS.trashS + '<span>Delete</span></button>' +
         '</div>';
     }
     return '<div class="note-card' + (active ? ' active' : '') + (ui.trash ? ' trashed' : '') + '" data-id="' + n.id + '"' +
+      (ui.trash ? '' : ' draggable="true"') +
       ' role="button" tabindex="0" aria-label="' + escapeHtml(title) + '">' +
       '<div class="nc-top"><span class="nc-title">' + hi(title) + '</span>' +
       (icons ? '<span class="nc-icons">' + icons + '</span>' : '') + '</div>' +
@@ -544,7 +546,7 @@
         : (ui.search.trim() || ui.tag) ? 'No notes match your filters.'
         : ui.folder ? 'No notes in this folder yet.<br>Create one — it lands right here.'
         : (ui.all || !folderExists()) ? 'No notes yet — create your first one!'
-        : 'All your notes are in folders.<br>Open one from the Folders tab — or view All notes.';
+        : 'All your notes are in folders.<br>Open one from the Folders list — or view All notes.';
       notesList.innerHTML = '<div class="list-empty">' + ICONS.search + '<p>' + msg + '</p></div>';
       return;
     }
@@ -566,7 +568,7 @@
       clearFiltersBtn.hidden = !ui.search.trim() && !ui.tag;
     } else if (folderExists()) {
       emptyTitle.textContent = 'Nothing unfiled';
-      emptyText.textContent = 'All your notes live in folders — open one from the Folders tab, or click All notes to see everything.';
+      emptyText.textContent = 'All your notes live in folders — open one from the Folders list in the sidebar, or click All notes to see everything.';
       emptyNewBtn.hidden = emptyDailyBtn.hidden = false;
       clearFiltersBtn.hidden = true;
     } else {
@@ -775,19 +777,11 @@
   }
 
   function requestPurge(id) {
-    if (purgeArm.id === id) {
-      clearTimeout(purgeArm.t);
-      purgeArm.id = null;
+    var n = getNote(id);
+    if (!n || !n.deleted) return;
+    openConfirm('Delete forever?', '\u201C' + (n.title || 'Untitled') + '\u201D will be gone for good. This cannot be undone.', 'Delete forever', function () {
       purgeNote(id);
-      return;
-    }
-    clearTimeout(purgeArm.t);
-    purgeArm.id = id;
-    renderNotesList();
-    purgeArm.t = setTimeout(function () {
-      purgeArm.id = null;
-      renderNotesList();
-    }, 2600);
+    });
   }
 
   function duplicateNote(noteId) {
@@ -1166,28 +1160,38 @@
 
   /* trash banner */
   restoreBtn.addEventListener('click', function () { if (ui.activeId) restoreNote(ui.activeId); });
-  withConfirm(deleteForeverBtn, 'Really delete?', function () { if (ui.activeId) purgeNote(ui.activeId); });
-
-  /* two-step confirm helper */
-  function withConfirm(btn, label, fn) {
-    var timer = null;
-    btn.addEventListener('click', function () {
-      if (btn.classList.contains('armed')) {
-        clearTimeout(timer);
-        btn.classList.remove('armed');
-        if (btn.dataset.orig) { btn.innerHTML = btn.dataset.orig; delete btn.dataset.orig; }
-        fn();
-        return;
-      }
-      btn.classList.add('armed');
-      btn.dataset.orig = btn.innerHTML;
-      btn.innerHTML = label;
-      timer = setTimeout(function () {
-        btn.classList.remove('armed');
-        if (btn.dataset.orig) { btn.innerHTML = btn.dataset.orig; delete btn.dataset.orig; }
-      }, 2600);
+  deleteForeverBtn.addEventListener('click', function () {
+    var n = getNote(ui.activeId);
+    if (!n || !n.deleted) return;
+    openConfirm('Delete forever?', '\u201C' + (n.title || 'Untitled') + '\u201D will be gone for good. This cannot be undone.', 'Delete forever', function () {
+      purgeNote(n.id);
     });
-  }
+  });
+
+  /* trash toolbar: recover all / delete all */
+  recoverAllBtn.addEventListener('click', function () {
+    var ids = notes.filter(function (n) { return n.deleted; }).map(function (n) { return n.id; });
+    if (!ids.length) return;
+    notes.forEach(function (n) {
+      if (n.deleted) { n.deleted = false; n.deletedAt = null; }
+    });
+    persist();
+    if (ids.indexOf(ui.activeId) !== -1) ui.activeId = null;
+    renderAll();
+    toast('Recovered ' + ids.length + ' note' + (ids.length === 1 ? '' : 's'));
+  });
+  deleteAllBtn.addEventListener('click', function () {
+    var trashed = notes.filter(function (n) { return n.deleted; });
+    if (!trashed.length) return;
+    openConfirm('Empty trash?', 'Permanently delete ' + trashed.length + ' note' + (trashed.length === 1 ? '' : 's') + '. This cannot be undone.', 'Delete all', function () {
+      recordPurge(trashed.map(function (n) { return n.id; }));
+      notes = notes.filter(function (n) { return !n.deleted; });
+      persist(); persistPurged();
+      ui.activeId = null;
+      renderAll();
+      toast('Trash emptied \u2014 ' + trashed.length + ' note' + (trashed.length === 1 ? '' : 's') + ' deleted forever');
+    });
+  });
 
   /* sidebar interactions */
   notesList.addEventListener('click', function (e) {
@@ -1231,10 +1235,9 @@
   });
 
   notesViewBtn.addEventListener('click', function () {
-    if (!ui.trash && !ui.cal && !ui.fx && !ui.folder && !ui.all) return;
+    if (!ui.trash && !ui.cal && !ui.folder && !ui.all) return;
     ui.trash = false;
     ui.cal = false;
-    ui.fx = false;
     ui.folder = null; // the Notes tab is the way home: back to unfiled notes
     ui.all = false;
     var n = getNote(ui.activeId);
@@ -1260,14 +1263,6 @@
     searchInput.value = '';
     renderSidebar();
     if (!getNote(ui.activeId)) renderEditor();
-  });
-
-  withConfirm(emptyTrashBtn, 'Really empty trash?', function () {
-    notes = notes.filter(function (n) { return !n.deleted; });
-    persist();
-    ui.activeId = null;
-    renderAll();
-    toast('Trash emptied');
   });
 
   /* mobile sidebar + desktop resize/collapse */
@@ -1909,7 +1904,6 @@
     });
     A('Move to folder…', '', ICONS.folder, function () { openFolderPicker(); });
     A('New folder', '', ICONS.folderPlus, function () {
-      ui.fx = true; ui.trash = false; ui.cal = false; renderAll();
       openPromptModal('New folder', '', 'Create', function (v) { createFolder(v); });
     });
     A('Version history', '', ICONS.undo, function () { openHist(); });
@@ -1964,7 +1958,7 @@
       Object.keys(folderCounts()).sort(function (a, b) { return a.localeCompare(b); }).slice(0, 6).forEach(function (f) {
         if (!q || f.toLowerCase().indexOf(q) !== -1) {
           folderItems.push({ type: 'action', label: f, sub: 'Go to folder', icon: ICONS.folderS, run: function () {
-            ui.folder = f; ui.all = false; ui.trash = false; ui.cal = false; ui.fx = false; renderAll();
+            ui.folder = f; ui.all = false; ui.trash = false; ui.cal = false; renderAll();
           } });
         }
       });
@@ -2249,7 +2243,7 @@
     var count = notes.filter(function (n) { return !n.deleted; }).length;
     var size = 0;
     try { size = new Blob([JSON.stringify(notes)]).size; } catch (e) {}
-    aboutInfo.textContent = 'Jotter v1.13.1 · ' + count + ' note' + (count === 1 ? '' : 's') +
+    aboutInfo.textContent = 'Jotter v1.14 · ' + count + ' note' + (count === 1 ? '' : 's') +
       ' · ' + fmtBytes(size) + ' · your data lives in this browser.';
     settingsOverlay.hidden = false;
     setTimeout(function () { if (!sync.token) syncTokenInput.focus(); }, 0);
@@ -2301,12 +2295,14 @@
     if (sync.auto && !sync.token) toast('Add a token first to enable auto-sync');
     else toast(sync.auto ? 'Auto-sync on — notes sync a few seconds after each change' : 'Auto-sync off');
   });
-  withConfirm(syncDisconnectBtn, 'Really disconnect?', function () {
-    sync = { token: '', gistId: '', auto: false, lastSync: 0 };
-    saveSyncCfg();
-    updateSyncStatus();
-    updateStorageNote();
-    toast('Sync disconnected — your notes stay in this browser');
+  syncDisconnectBtn.addEventListener('click', function () {
+    openConfirm('Disconnect sync?', 'Stop syncing with this Gist? Your notes stay right here in this browser.', 'Disconnect', function () {
+      sync = { token: '', gistId: '', auto: false, lastSync: 0 };
+      saveSyncCfg();
+      updateSyncStatus();
+      updateStorageNote();
+      toast('Sync disconnected — your notes stay in this browser');
+    });
   });
 
   /* ---------- prompt modal (generic input dialog) ---------- */
@@ -2578,34 +2574,47 @@
     return out;
   }
 
-  /* the Folders tab */
-  function renderFoldersView() {
+  /* the always-visible Folders section */
+  var foldersOpen = true;
+  var dragNoteId = null; // note being dragged onto a folder / unfiled / trash
+
+  function renderFoldersSec() {
     var counts = folderCounts();
     var total = notes.filter(function (n) { return !n.deleted; }).length;
     var unfiled = notes.filter(function (n) { return !n.deleted && !n.folder; }).length;
     var names = folderNames();
-    var html = '<div class="folder-row quick' + (!ui.folder && !ui.all ? ' cur' : '') + '" data-fx="home" role="button" tabindex="0">'
+    fsTotal.textContent = names.length ? names.length + (names.length === 1 ? ' folder' : ' folders') : '';
+    var html = '<div class="folder-row quick' + (!ui.folder && !ui.all ? ' cur' : '') + '" data-fx="home" role="button" tabindex="0" title="Notes not in any folder \u2014 drop a note here to unfile it">'
       + '<span class="fr-ico">' + ICONS.fileS + '</span><span class="fr-name">Unfiled notes</span>'
       + '<span class="fr-count">' + unfiled + '</span></div>';
-    html += '<div class="folder-row quick' + (ui.all && !ui.folder ? ' cur' : '') + '" data-fx="all" role="button" tabindex="0">'
+    html += '<div class="folder-row quick' + (ui.all && !ui.folder ? ' cur' : '') + '" data-fx="all" role="button" tabindex="0" title="Every note, filed or not">'
       + '<span class="fr-ico">' + ICONS.layers + '</span><span class="fr-name">All notes</span>'
       + '<span class="fr-count">' + total + '</span></div>';
     html += names.map(function (f) {
-      return '<div class="folder-row' + (ui.folder === f ? ' cur' : '') + '" data-folder="' + escapeHtml(f) + '" role="button" tabindex="0">'
+      return '<div class="folder-row' + (ui.folder === f ? ' cur' : '') + '" data-folder="' + escapeHtml(f) + '" role="button" tabindex="0" title="Open \u201C' + escapeHtml(f) + '\u201D \u2014 or drop a note here to file it">'
         + '<span class="fr-ico">' + ICONS.folderS + '</span><span class="fr-name">' + escapeHtml(f) + '</span>'
         + '<span class="fr-count">' + (counts[f] || 0) + '</span>'
         + '<button class="fr-more" data-fm="' + escapeHtml(f) + '" title="Folder options" aria-label="Options for ' + escapeHtml(f) + '">\u22EF</button>'
         + '</div>';
     }).join('');
-    if (!names.length) html += '<div class="fv-empty">' + ICONS.folder + '<p>No folders yet.<br>Create one, then file notes into it from their right-click menu.</p></div>';
-    foldersList.innerHTML = html;
+    fsRows.innerHTML = html;
   }
-  foldersViewBtn.addEventListener('click', function () {
-    if (ui.fx && !ui.trash && !ui.cal) { ui.fx = false; }
-    else { ui.fx = true; ui.cal = false; ui.trash = false; }
-    renderAll();
+  fsHead.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('#fsNewBtn')) return; // the + button has its own job
+    foldersOpen = !foldersOpen;
+    foldersSec.classList.toggle('closed', !foldersOpen);
   });
-  foldersList.addEventListener('click', function (e) {
+  fsHead.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    foldersOpen = !foldersOpen;
+    foldersSec.classList.toggle('closed', !foldersOpen);
+  });
+  fsNewBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    openPromptModal('New folder', '', 'Create', function (v) { createFolder(v); });
+  });
+  fsRows.addEventListener('click', function (e) {
     var more = e.target.closest ? e.target.closest('[data-fm]') : null;
     if (more) {
       e.stopPropagation(); // keep the document-level "click outside closes menus" handler from instantly closing it
@@ -2615,7 +2624,6 @@
     }
     var quick = e.target.closest ? e.target.closest('[data-fx]') : null;
     if (quick) {
-      ui.fx = false;
       if (quick.getAttribute('data-fx') === 'all') { ui.all = true; ui.folder = null; }
       else { ui.folder = null; ui.all = false; }
       renderAll();
@@ -2623,26 +2631,86 @@
     }
     var row = e.target.closest ? e.target.closest('[data-folder]') : null;
     if (!row) return;
-    ui.fx = false;
     ui.folder = row.getAttribute('data-folder');
     ui.all = false;
     renderAll();
   });
-  foldersList.addEventListener('keydown', function (e) {
+  fsRows.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     var row = e.target.closest ? e.target.closest('[data-folder],[data-fx]') : null;
     if (!row) return;
     e.preventDefault();
     row.click();
   });
-  foldersList.addEventListener('contextmenu', function (e) {
+  fsRows.addEventListener('contextmenu', function (e) {
     var row = e.target.closest ? e.target.closest('[data-folder]') : null;
     if (!row) return;
     e.preventDefault();
     showCtxFolder(row.getAttribute('data-folder'), e.clientX, e.clientY);
   });
-  newFolderBtn2.addEventListener('click', function () {
-    openPromptModal('New folder', '', 'Create', function (v) { createFolder(v); });
+
+  /* drag & drop: card \u2192 folder row (file), \u2192 Unfiled row (unfile), \u2192 Trash button (trash) */
+  function clearDropHints() {
+    $$('.drop-hint').forEach(function (el) { el.classList.remove('drop-hint'); });
+  }
+  notesList.addEventListener('dragstart', function (e) {
+    if (ui.trash) { e.preventDefault(); return; }
+    var card = e.target.closest ? e.target.closest('.note-card') : null;
+    if (!card) return;
+    dragNoteId = card.getAttribute('data-id');
+    card.classList.add('dragging');
+    try {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragNoteId);
+    } catch (err) {}
+  });
+  notesList.addEventListener('dragend', function () {
+    dragNoteId = null;
+    $$('.note-card.dragging').forEach(function (el) { el.classList.remove('dragging'); });
+    clearDropHints();
+  });
+  fsRows.addEventListener('dragover', function (e) {
+    if (!dragNoteId) return;
+    var row = e.target.closest ? e.target.closest('[data-folder],[data-fx="home"]') : null;
+    if (!row) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    clearDropHints();
+    row.classList.add('drop-hint');
+  });
+  fsRows.addEventListener('dragleave', function (e) {
+    var row = e.target.closest ? e.target.closest('[data-folder],[data-fx="home"]') : null;
+    if (row && !(e.relatedTarget && row.contains(e.relatedTarget))) row.classList.remove('drop-hint');
+  });
+  fsRows.addEventListener('drop', function (e) {
+    if (!dragNoteId) return;
+    var row = e.target.closest ? e.target.closest('[data-folder],[data-fx="home"]') : null;
+    if (!row) return;
+    e.preventDefault();
+    clearDropHints();
+    var n = getNote(dragNoteId);
+    dragNoteId = null;
+    if (!n || n.deleted) return;
+    var f = row.getAttribute('data-folder') || '';
+    if (f === (n.folder || '')) return;
+    moveToFolder(n, f);
+  });
+  trashViewBtn.addEventListener('dragover', function (e) {
+    if (!dragNoteId) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    trashViewBtn.classList.add('drop-hint');
+  });
+  trashViewBtn.addEventListener('dragleave', function () { trashViewBtn.classList.remove('drop-hint'); });
+  trashViewBtn.addEventListener('drop', function (e) {
+    if (!dragNoteId) return;
+    e.preventDefault();
+    trashViewBtn.classList.remove('drop-hint');
+    var id = dragNoteId;
+    dragNoteId = null;
+    var n = getNote(id);
+    if (!n || n.deleted) return;
+    trashNote(id);
   });
   function createFolder(name) {
     name = String(name || '').replace(/[\\/]/g, '').trim().slice(0, 60);
@@ -2673,7 +2741,10 @@
     renderFolderPick();
     newFolderInput.value = '';
     folderOverlay.hidden = false;
-    setTimeout(function () { newFolderInput.focus(); }, 0);
+    setTimeout(function () {
+      var first = folderPick.querySelector('button');
+      if (first) first.focus(); // picking a folder is the main job — not typing a new name
+    }, 0);
   }
   function closeFolderPicker() { folderOverlay.hidden = true; pickNoteId = null; }
   function renderFolderPick() {
@@ -2749,7 +2820,6 @@
     ctxTarget = f;
     ctxKind = 'folder';
     ctxMenu.innerHTML =
-      '<button data-fa="open">' + ICONS.folder + '<span>Open \u201C' + escapeHtml(f) + '\u201D</span></button>' +
       '<button data-fa="newnote">' + ICONS.filePlus + '<span>New note inside</span></button>' +
       '<hr />' +
       '<button id="ctxRename">' + ICONS.pencil + '<span>Rename \u201C' + escapeHtml(f) + '\u201D\u2026</span></button>' +
@@ -2759,8 +2829,8 @@
     ctxMenu.hidden = false;
   }
   function folderCtxAction(act, f) {
-    if (act === 'open') { ui.fx = false; ui.folder = f; ui.all = false; renderAll(); return; }
-    if (act === 'newnote') { ui.fx = false; createNote({ folder: f }); return; }
+    if (act === 'open') { ui.folder = f; ui.all = false; ui.trash = false; renderAll(); return; }
+    if (act === 'newnote') { ui.folder = f; ui.all = false; ui.trash = false; renderAll(); createNote({ folder: f }); return; }
   }
 
 
@@ -2832,7 +2902,7 @@
 
   /* ---------- location bar (where am I?) ---------- */
   function renderLocBar() {
-    if (ui.trash || ui.cal || ui.fx) { locBar.hidden = true; return; }
+    if (ui.trash || ui.cal) { locBar.hidden = true; return; }
     locBar.hidden = false;
     var inFolder = !!ui.folder, inAll = !inFolder && ui.all;
     locBackBtn.hidden = !(inFolder || inAll);
@@ -3659,7 +3729,7 @@
   }
   calViewBtn.addEventListener('click', function () {
     if (ui.cal && !ui.trash) { ui.cal = false; }
-    else { ui.cal = true; ui.trash = false; ui.fx = false; }
+    else { ui.cal = true; ui.trash = false; }
     renderAll();
   });
   calPrevBtn.addEventListener('click', function () {
@@ -3727,11 +3797,11 @@
     renderAll();
     if (sync.token && sync.auto) setTimeout(function () { syncNow(true); }, 2500);
     var ver = store.get(VER_KEY);
-    if (ver !== '16') {
-      store.set(VER_KEY, '16');
+    if (ver !== '17') {
+      store.set(VER_KEY, '17');
       if (ver !== null) {
         setTimeout(function () {
-          toast('\u2728 Jotter updated to v1.13.1 \u2014 folder + tag deletion now uses a clear confirmation dialog (no more timing-sensitive double-click)', { timeout: 8000 });
+          toast('\u2728 Jotter updated to v1.14 \u2014 folders now live right in the sidebar, with drag & drop filing and Recover all / Delete all in Trash', { timeout: 8000 });
         }, 700);
       }
     }

@@ -145,7 +145,6 @@ kbd {
 .btn.danger:hover { filter: brightness(1.08); }
 .btn.block { width: 100%; justify-content: flex-start; }
 .btn.block kbd { margin-left: auto; }
-.btn.armed { background: var(--danger) !important; color: #fff !important; border-color: transparent !important; }
 
 .link-btn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -303,7 +302,6 @@ kbd {
 }
 .mini-btn:hover { color: var(--text); background: var(--bg-hover); }
 .mini-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
-.mini-btn.armed { background: var(--danger); color: #fff; border-color: var(--danger); }
 
 .list-empty {
   padding: 34px 18px;
@@ -947,7 +945,6 @@ html[data-theme="dark"] .segmented button.active { background: #262932; }
 
 /* tag context menu (fixed-position variant) */
 .ctx-menu { position: fixed; z-index: 95; }
-.ctx-menu button.armed { color: #fff; background: var(--danger); }
 
 /* zen / focus mode */
 .zen-exit { display: none; }
@@ -1492,15 +1489,8 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
 
 
 /* ============================================================
-   v1.13 — the Folders tab: full management view
+   v1.13 — folder rows, quick rows, ⋯ menus (kept for v1.14)
    ============================================================ */
-.folders-view { display: flex; flex-direction: column; min-height: 0; flex: 1; }
-.fv-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 2px 2px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px;
-}
-.fv-title { font-size: 13.5px; }
-.folders-view .folders-list { flex: 1; overflow-y: auto; }
 .folder-row.quick { color: var(--text-muted); }
 .folder-row.quick.cur, .folder-row.cur { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .folder-row.quick .fr-ico, .folder-row.cur .fr-ico { color: var(--accent); }
@@ -1512,11 +1502,8 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
   color: var(--text-muted); font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
 }
 .fr-more:hover { background: var(--bg-hover); color: var(--text); }
-.fv-empty { text-align: center; color: var(--text-muted); padding: 34px 10px; }
-.fv-empty svg { opacity: .45; margin-bottom: 8px; }
-.fv-empty p { font-size: 12.5px; line-height: 1.6; margin: 0; }
 
-/* four tabs in the sidebar bottom seg — keep them fitting on phones */
+/* three tabs in the sidebar bottom seg — keep them fitting on phones */
 @media (max-width: 640px) {
   .side-bottom .seg-btn { padding: 7px 6px; font-size: 11.5px; gap: 5px; }
 }
@@ -1524,3 +1511,38 @@ mark.find-hit.cur { background: var(--accent); color: #fff; }
   .side-bottom .seg-btn span:not(.count) { display: none; } /* icon-only: labels still in title+aria */
   .side-bottom .seg-btn { padding: 7px 9px; }
 }
+
+/* ============================================================
+   v1.14 — folders, simplified: always-visible section, drag & drop,
+   trash toolbar (Recover all / Delete all)
+   ============================================================ */
+.folders-sec { border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 4px; flex: none; }
+.fs-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; cursor: pointer; border-radius: 7px;
+  -webkit-user-select: none; user-select: none;
+}
+.fs-head:hover { background: var(--bg-hover); }
+.fs-head b { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+.fs-caret { display: inline-flex; color: var(--text-muted); transition: transform .15s ease; flex: none; }
+.folders-sec.closed .fs-caret { transform: rotate(-90deg); }
+.fs-total { font-size: 10.5px; color: var(--text-muted); flex: none; }
+.fs-head .icon-btn { width: 22px; height: 22px; flex: none; }
+.fs-body { max-height: 30vh; overflow-y: auto; }
+.folders-sec.closed .fs-body { display: none; }
+.fs-rows { display: flex; flex-direction: column; gap: 1px; padding: 2px 0 4px; }
+
+/* drag & drop */
+.note-card.dragging { opacity: .45; outline: 2px dashed var(--accent); outline-offset: -2px; }
+.folder-row.drop-hint {
+  background: var(--accent-soft); color: var(--accent);
+  outline: 2px dashed var(--accent); outline-offset: -2px;
+}
+.folder-row.drop-hint .fr-ico { color: var(--accent); }
+.seg-btn.drop-hint { background: var(--danger); color: #fff; }
+.seg-btn.drop-hint .count { background: rgba(255, 255, 255, .28); color: #fff; }
+
+/* trash toolbar */
+.trash-bar { flex-wrap: wrap; }
+.trash-bar .btn.small { flex: none; }
+.trash-bar .btn.small:disabled { opacity: .45; cursor: default; }

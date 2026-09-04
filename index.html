@@ -88,12 +88,17 @@
         <div class="cal-daybox" id="calDay"></div>
       </div>
 
-      <div class="folders-view" id="foldersPanel" hidden>
-        <div class="fv-head">
-          <b class="fv-title">Folders</b>
-          <button class="btn small primary" id="newFolderBtn" data-icon="folderPlus"><span>New folder</span></button>
+      <div class="folders-sec" id="foldersSec">
+        <div class="fs-head" id="fsHead" role="button" tabindex="0" aria-label="Folders">
+          <span class="fs-caret" id="fsCaret" data-icon="chevRight"></span>
+          <b>Folders</b>
+          <span class="fs-total" id="fsTotal"></span>
+          <span class="loc-spacer"></span>
+          <button class="icon-btn" id="fsNewBtn" data-icon="folderPlus" title="New folder" aria-label="New folder"></button>
         </div>
-        <div class="folders-list" id="foldersList"></div>
+        <div class="fs-body" id="fsBody">
+          <div class="fs-rows" id="fsRows"></div>
+        </div>
       </div>
 
       <div class="tag-filters" id="tagFilters"></div>
@@ -107,12 +112,20 @@
         <button class="icon-btn" id="locNewBtn" data-icon="filePlus" title="New note in this folder" aria-label="New note in this folder" hidden></button>
       </div>
 
+      <div class="loc-bar trash-bar" id="trashBar" hidden>
+        <span class="loc-ico" id="trashIco" data-icon="trash"></span>
+        <b class="loc-name">Trash</b>
+        <span class="loc-count" id="trashCount2"></span>
+        <span class="loc-spacer"></span>
+        <button class="btn small ghost" id="recoverAllBtn"><span>Recover all</span></button>
+        <button class="btn small danger" id="deleteAllBtn"><span>Delete all</span></button>
+      </div>
+
       <nav class="notes-list" id="notesList" role="list" aria-label="Notes"></nav>
 
       <div class="side-bottom">
         <div class="seg">
           <button class="seg-btn" id="notesViewBtn" data-icon="file" title="Notes"><span>Notes</span></button>
-          <button class="seg-btn" id="foldersViewBtn" data-icon="folder" title="Folders"><span>Folders</span></button>
           <button class="seg-btn" id="calViewBtn" data-icon="calendar" title="Calendar"><span>Calendar</span></button>
           <button class="seg-btn" id="trashViewBtn" data-icon="trash" title="Trash">
             <span>Trash</span><span class="count" id="trashCount" hidden></span>
@@ -134,7 +147,6 @@
             </div>
           </div>
         </div>
-        <button class="link-btn danger block" id="emptyTrashBtn" hidden>Empty trash</button>
         <div class="storage-note" id="storageNote"></div>
       </div>
       <div class="side-resizer" id="sideResizer" title="Drag to resize — double-click to hide"></div>
@@ -454,8 +466,8 @@
           <div class="bg-row"><span class="bg-ico" data-icon="calendar"></span><div class="bg-txt"><b>Today&rsquo;s journal</b> &mdash; dated entry with a journal template; the &#128293; streak appears after 2+ days in a row</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="search"></span><div class="bg-txt"><b>Search</b> &mdash; live search across titles, text and tags (<kbd>/</kbd>); matches are highlighted</div></div>
           <div class="bg-row"><span class="bg-ico bg-tag">#</span><div class="bg-txt"><b>Tag chips</b> &mdash; click to filter by a tag; <b>right-click</b> to rename it or remove it from all notes</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; the <b>Folders</b> tab (sidebar bottom) manages everything: create, rename, open, or delete folders with the &#8942; menu on each row. File notes via <b>right-click / long-press</b> on a card, or More &#9662; &rarr; Move to folder. The location bar above the notes list shows where you are</div></div>
-          <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days)</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="folder"></span><div class="bg-txt"><b>Folders</b> &mdash; always visible in the sidebar (collapse them with the caret): create with the <b>+</b>, rename, open, or delete folders with the &#8942; menu on each row. File notes by <b>dragging a card onto a folder</b>, via <b>right-click / long-press</b> on a card, or More &#9662; &rarr; Move to folder. The location bar above the notes list shows where you are</div></div>
+          <div class="bg-row"><span class="bg-ico" data-icon="file"></span><div class="bg-txt"><b>Notes / Calendar / Trash</b> &mdash; switch the sidebar between your notes, a month calendar of your writing, and the trash (deleted notes rest 30 days). In Trash, <b>Recover all</b> and <b>Delete all</b> sit right at the top &mdash; and you can drag a note onto the Trash button to throw it away</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="panelLeft"></span><div class="bg-txt"><b>Resize / hide sidebar</b> &mdash; drag the sidebar&rsquo;s right edge to resize it; double-click the edge, press <kbd>Ctrl</kbd>+<kbd>\</kbd> or use the &#9776; toolbar button to hide it entirely</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="graph"></span><div class="bg-txt"><b>Note graph</b> &mdash; your notes as a map of [[wiki-links]]; drag, zoom and pan it, click a bubble to open the note</div></div>
           <div class="bg-row"><span class="bg-ico" data-icon="download"></span><div class="bg-txt"><b>Backup &#9662;</b> &mdash; JSON backup of everything, or export all notes as one Markdown file</div></div>
@@ -485,7 +497,16 @@
         <!-- ============ TAB 3: WHAT'S NEW ============ -->
         <div class="help-pane" data-pane="whatsnew">
           <div class="wn-version">
-            <h4>v1.13.1 <span class="pill">current</span></h4>
+            <h4>v1.14 <span class="pill">current</span></h4>
+            <ul>
+              <li>&#128193; <b>Folders live in the sidebar, always</b> — no more switching to a separate Folders tab. Your folders sit right under the search &amp; sort rows with live counts, one click away. Collapse the section with the caret if you want the space back</li>
+              <li>&#128070; <b>Drag &amp; drop filing</b> — grab any note card and drop it on a folder to file it. Drop it on <b>Unfiled notes</b> to pull it out of a folder, or on the <b>Trash</b> button to throw it away. The card highlights, the target glows — it&rsquo;s tactile and instant (mouse drag; on touch, use the card&rsquo;s &#8942; menu as before)</li>
+              <li>&#128230; <b>Recover all / Delete all in Trash</b> — the Trash view now has a proper toolbar: restore everything in one click, or empty it with a clear confirmation dialog (the old &ldquo;Empty trash&rdquo; link was buried at the bottom of the sidebar)</li>
+              <li>&#129514; <b>One confirmation language</b> — the last double-click-to-confirm buttons (delete forever, disconnect sync) now use the same clear dialog as everything else</li>
+            </ul>
+          </div>
+          <div class="wn-version">
+            <h4>v1.13.1 &mdash; deletion confirmation fix</h4>
             <ul>
               <li>&#9888;&#65039; <b>Fixed: deleting folders &amp; tags</b> — the old double-click confirmation auto-cancelled after a moment, which could make Delete feel like it did nothing. Deletion now opens a <b>clear confirmation dialog</b> that states exactly what will happen (&ldquo;3 notes will be removed from the folder and kept — nothing is deleted&rdquo;) and waits for you, however long you take</li>
               <li>&#128279; The dialog works on every device, cancels with <kbd>Esc</kbd>, and Cancel is the focused safe default</li>

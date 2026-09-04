@@ -38,7 +38,7 @@
 - 🔒 **PIN-locked notes** — encrypt any note's text with a PIN (AES-256-GCM via your browser's built-in crypto); it stays encrypted in storage, backups and sync, unlocking only per tab when you enter the PIN (More ▾ → Lock note)
 - 🔍 **Find in note** — `Ctrl`/`⌘`+`F` highlights every match in the preview and jumps between them
 - 🏷️ **Tags** — organise notes with tag chips, filter by tag, right-click to rename/delete a tag everywhere
-- 📁 **Folders** — a dedicated Folders tab to create, rename, open and delete folders (⋯ menu on every row, works on touch); file notes via right-click / long-press on a card or More ▾ → Move to folder. Folder structure syncs and travels with backups
+- 📁 **Folders** — always visible in the sidebar (collapsible): create, rename, open and delete folders (⋯ menu on every row, works on touch); file notes by **drag & drop** onto a folder (or right-click / long-press a card, or More ▾ → Move to folder). Folder structure syncs and travels with backups
 - 📌 **Pin & star** the notes that matter; sort by updated / created / title
 - 🔍 **Instant search** across titles, bodies, and tags — with match highlighting
 - 📅 **Today's journal** — one click creates a dated daily entry with a journal template (and a 🔥 streak counter)
@@ -50,7 +50,7 @@
 - 🖨️ **Print / save as PDF** with clean print styles
 - 📱 **Responsive + installable** — works great on phones (with a one-tap new-note button); install it as a PWA and it works offline
 - ⌨️ **Keyboard shortcuts** for everything
-- 🗑️ **Trash** — deleted notes rest for 30 days before being purged
+- 🗑️ **Trash** — deleted notes rest for 30 days before being purged; **Recover all** and **Delete all** buttons right in the Trash view, and you can drag a note onto the Trash button to throw it away
 
 ## ☁️ Sync across devices (free, via your GitHub)
 

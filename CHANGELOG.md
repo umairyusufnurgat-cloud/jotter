@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.14 — folders, simplified 🏠
+- **Folders live in the sidebar, always** — the separate Folders tab is gone; folders sit under search & sort with live counts, collapsible via the header caret
+- **Drag & drop filing** — drag a note card onto a folder to file it, onto “Unfiled notes” to unfile it, onto the Trash button to trash it (targets glow on hover; touch devices keep the ⋯ menu)
+- **Trash toolbar** — visible **Recover all** and **Delete all** buttons at the top of the Trash view (Delete all asks with a confirmation dialog); the old buried “Empty trash” link is gone
+- **One confirmation language** — the last double-click-to-confirm buttons (per-note Delete, editor Delete forever, sync Disconnect) now use the same clear dialog as everything else
+- Empty-trash now records purge tombstones so synced devices don’t resurrect deleted notes
+- Folder picker: focuses the folder list first instead of the new-name input
+- “New note inside” now opens that folder so you see the note it creates
+
 ## v1.13.1 — deletion confirmation fix ⚠️
 
 - ⚠️ **Fixed: deleting folders and tags could feel broken** — the confirmation was a timing-sensitive "click again within 2.6s" pattern on the menu item; hesitate a moment and the menu quietly closed and nothing was deleted. Folder and tag deletion now opens a **real confirmation dialog**: it states exactly what will happen ("3 notes will be removed from the folder and kept — nothing is deleted"), it waits for you indefinitely, Esc cancels, and Cancel is the focused safe default
